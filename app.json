@@ -1,0 +1,391 @@
+{
+  "_comment": "This file is generated. Please edit .homeycompose/app.json instead.",
+  "id": "de.ftedv.librecgm",
+  "version": "1.1.3",
+  "compatibility": ">=12.4.0",
+  "sdk": 3,
+  "runtime": "nodejs",
+  "platforms": [
+    "local"
+  ],
+  "name": {
+    "en": "Libre CGM"
+  },
+  "description": {
+    "en": "Adds support for libre constant glucose monitors"
+  },
+  "category": [
+    "internet"
+  ],
+  "brandColor": "#ff8f00",
+  "tags": {
+    "en": [
+      "diabetes",
+      "glucose",
+      "cgm",
+      "libreview",
+      "freestyle libre",
+      "sensor"
+    ]
+  },
+  "permissions": [],
+  "images": {
+    "small": "/assets/images/small.png",
+    "large": "/assets/images/large.png"
+  },
+  "author": {
+    "name": "Florian Trück",
+    "email": "ftrueck@gmail.com"
+  },
+  "support": "mailto: ftrueck@gmail.com",
+  "homeyCommunityTopicId": 155006,
+  "contributing": {
+    "donate": {
+      "paypal": {
+        "username": "ftrueck"
+      },
+      "bunq": {
+        "username": "ftrueck"
+      },
+      "patreon": {
+        "username": "ftrueck"
+      }
+    }
+  },
+  "flow": {
+    "triggers": [
+      {
+        "title": {
+          "en": "Glucose became high",
+          "de": "Glukose wurde hoch"
+        },
+        "tokens": [
+          {
+            "name": "glucose_mgdl",
+            "type": "number",
+            "title": {
+              "en": "Glucose mg/dL",
+              "de": "Glukose mg/dL"
+            }
+          },
+          {
+            "name": "glucose_mmol",
+            "type": "number",
+            "title": {
+              "en": "Glukose mmol/L",
+              "de": "Glukose mmol/L"
+            }
+          }
+        ],
+        "id": "glucose_high"
+      },
+      {
+        "title": {
+          "en": "Glucose became low",
+          "de": "Glukose wurde niedrig"
+        },
+        "tokens": [
+          {
+            "name": "glucose_mgdl",
+            "type": "number",
+            "title": {
+              "en": "Glucose mg/dL",
+              "de": "Glukose mg/dL"
+            }
+          },
+          {
+            "name": "glucose_mmol",
+            "type": "number",
+            "title": {
+              "en": "Glucose mmol/L",
+              "de": "Glukose mmol/L"
+            }
+          }
+        ],
+        "id": "glucose_low"
+      },
+      {
+        "title": {
+          "en": "Glucose value updated",
+          "de": "Glukosewert aktualisiert"
+        },
+        "tokens": [
+          {
+            "name": "glucose_mgdl",
+            "type": "number",
+            "title": {
+              "en": "Glucose mg/dL",
+              "de": "Glukose mg/dL"
+            }
+          },
+          {
+            "name": "glucose_mmol",
+            "type": "number",
+            "title": {
+              "en": "Glucose mmol/L",
+              "de": "Glukose mmol/L"
+            }
+          },
+          {
+            "name": "trend",
+            "type": "string",
+            "title": {
+              "en": "Trend",
+              "de": "Trend"
+            }
+          }
+        ],
+        "id": "glucose_updated"
+      },
+      {
+        "title": {
+          "en": "Sensor is expiring soon",
+          "de": "Sensor läuft bald ab"
+        },
+        "tokens": [
+          {
+            "name": "hours_remaining",
+            "type": "number",
+            "title": {
+              "en": "Hours remaining",
+              "de": "Verbleibende Stunden"
+            }
+          }
+        ],
+        "id": "sensor_expiring_soon"
+      }
+    ]
+  },
+  "drivers": [
+    {
+      "id": "glucose_person",
+      "name": {
+        "en": "LibreView Patient",
+        "de": "LibreView Patient"
+      },
+      "class": "sensor",
+      "capabilities": [
+        "measure_glucose_mgdl",
+        "measure_glucose_mmol",
+        "measure_glucose_delta_mgdl",
+        "measure_glucose_delta_mmol",
+        "glucose_trend",
+        "sensor_expiry_hours",
+        "alarm_glucose_high",
+        "alarm_glucose_low"
+      ],
+      "capabilitiesOptions": {
+        "measure_glucose_mgdl": {
+          "preventInsights": false
+        },
+        "measure_glucose_mmol": {
+          "preventInsights": true
+        },
+        "measure_glucose_delta_mgdl": {
+          "preventInsights": true
+        },
+        "measure_glucose_delta_mmol": {
+          "preventInsights": true
+        },
+        "sensor_expiry_hours": {
+          "preventInsights": true
+        }
+      },
+      "images": {
+        "small": "/drivers/glucose_person/assets/images/small.png",
+        "large": "/drivers/glucose_person/assets/images/large.png"
+      },
+      "settings": [
+        {
+          "id": "glucose_unit",
+          "type": "dropdown",
+          "label": {
+            "en": "Preferred glucose unit",
+            "de": "Bevorzugte Glukoseeinheit"
+          },
+          "value": "account",
+          "values": [
+            {
+              "id": "account",
+              "label": {
+                "en": "Use LibreView account unit",
+                "de": "LibreView-Kontoeinheit verwenden"
+              }
+            },
+            {
+              "id": "mgdl",
+              "label": {
+                "en": "mg/dL",
+                "de": "mg/dL"
+              }
+            },
+            {
+              "id": "mmol",
+              "label": {
+                "en": "mmol/L",
+                "de": "mmol/L"
+              }
+            }
+          ]
+        },
+        {
+          "id": "sensor_lifetime_days",
+          "type": "number",
+          "label": {
+            "en": "Sensor lifetime in days",
+            "de": "Sensorlaufzeit in Tagen"
+          },
+          "value": 16,
+          "min": 1,
+          "max": 30
+        }
+      ],
+      "pair": [
+        {
+          "id": "login",
+          "navigation": {
+            "next": "list_devices"
+          }
+        },
+        {
+          "id": "list_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_devices"
+          }
+        },
+        {
+          "id": "add_devices",
+          "template": "add_devices"
+        }
+      ]
+    }
+  ],
+  "capabilities": {
+    "alarm_glucose_high": {
+      "type": "boolean",
+      "title": {
+        "en": "High glucose alarm",
+        "de": "Hoher Glukosealarm"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/capabilities/alarm_glucose_high.svg"
+    },
+    "alarm_glucose_low": {
+      "type": "boolean",
+      "title": {
+        "en": "Low glucose alarm",
+        "de": "Niedriger Glukosealarm"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/capabilities/alarm_glucose_low.svg"
+    },
+    "glucose_trend": {
+      "type": "string",
+      "title": {
+        "en": "Glucose trend",
+        "de": "Glukosetrend"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/capabilities/glucose_trend.svg"
+    },
+    "measure_glucose_delta_mgdl": {
+      "type": "number",
+      "title": {
+        "en": "Glucose delta",
+        "de": "Glukoseänderung"
+      },
+      "units": {
+        "en": "mg/dL",
+        "de": "mg/dL"
+      },
+      "decimals": 0,
+      "min": -200,
+      "max": 200,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/capabilities/measure_glucose_delta_mgdl.svg"
+    },
+    "measure_glucose_delta_mmol": {
+      "type": "number",
+      "title": {
+        "en": "Glucose delta",
+        "de": "Glukoseänderung"
+      },
+      "units": {
+        "en": "mmol/L",
+        "de": "mmol/L"
+      },
+      "decimals": 1,
+      "min": -12,
+      "max": 12,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/capabilities/measure_glucose_delta_mmol.svg"
+    },
+    "measure_glucose_mgdl": {
+      "type": "number",
+      "title": {
+        "en": "Glucose",
+        "de": "Glukose"
+      },
+      "units": {
+        "en": "mg/dL",
+        "de": "mg/dL"
+      },
+      "decimals": 0,
+      "min": 0,
+      "max": 500,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": true,
+      "icon": "/assets/capabilities/measure_glucose_mgdl.svg"
+    },
+    "measure_glucose_mmol": {
+      "type": "number",
+      "title": {
+        "en": "Glucose",
+        "de": "Glukose"
+      },
+      "units": {
+        "en": "mmol/L",
+        "de": "mmol/L"
+      },
+      "decimals": 1,
+      "min": 0,
+      "max": 30,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": true,
+      "icon": "/assets/capabilities/measure_glucose_mmol.svg"
+    },
+    "sensor_expiry_hours": {
+      "type": "number",
+      "title": {
+        "en": "Sensor expiry",
+        "de": "Sensor läuft ab in"
+      },
+      "units": {
+        "en": "h",
+        "de": "h"
+      },
+      "decimals": 0,
+      "min": 0,
+      "max": 400,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/capabilities/sensor_expiry_hours.svg"
+    }
+  }
+}

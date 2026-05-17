@@ -1,0 +1,9 @@
+{
+  "settings": {
+    "debug": {
+      "title": "Debug",
+      "enable": "Debug-Protokollierung aktivieren",
+      "description": "Aktivieren Sie die Debug-Protokollierung, bevor Sie einen Diagnosebericht erzeugen. Deaktivieren Sie sie anschließend wieder, um unnötige Log-Ausgaben zu vermeiden."
+    }
+  }
+}

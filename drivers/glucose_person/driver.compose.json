@@ -1,0 +1,103 @@
+{
+  "id": "glucose_person",
+  "name": {
+    "en": "LibreView Patient",
+    "de": "LibreView Patient"
+  },
+  "class": "sensor",
+  "capabilities": [
+    "measure_glucose_mgdl",
+    "measure_glucose_mmol",
+    "measure_glucose_delta_mgdl",
+    "measure_glucose_delta_mmol",
+    "glucose_trend",
+    "sensor_expiry_hours",
+    "alarm_glucose_high",
+    "alarm_glucose_low"
+  ],
+  "capabilitiesOptions": {
+    "measure_glucose_mgdl": {
+      "preventInsights": false
+    },
+    "measure_glucose_mmol": {
+      "preventInsights": true
+    },
+    "measure_glucose_delta_mgdl": {
+      "preventInsights": true
+    },
+    "measure_glucose_delta_mmol": {
+      "preventInsights": true
+    },
+    "sensor_expiry_hours": {
+      "preventInsights": true
+    }
+  },
+  "images": {
+    "small": "{{driverAssetsPath}}/images/small.png",
+    "large": "{{driverAssetsPath}}/images/large.png"    
+  },
+  "settings": [
+    {
+      "id": "glucose_unit",
+      "type": "dropdown",
+      "label": {
+        "en": "Preferred glucose unit",
+        "de": "Bevorzugte Glukoseeinheit"
+      },
+      "value": "account",
+      "values": [
+        {
+          "id": "account",
+          "label": {
+            "en": "Use LibreView account unit",
+            "de": "LibreView-Kontoeinheit verwenden"
+          }
+        },
+        {
+          "id": "mgdl",
+          "label": {
+            "en": "mg/dL",
+            "de": "mg/dL"
+          }
+        },
+        {
+          "id": "mmol",
+          "label": {
+            "en": "mmol/L",
+            "de": "mmol/L"
+          }
+        }
+      ]
+    },
+    {
+        "id": "sensor_lifetime_days",
+        "type": "number",
+        "label": {
+            "en": "Sensor lifetime in days",
+            "de": "Sensorlaufzeit in Tagen"
+        },
+        "value": 16,
+        "min": 1,
+        "max": 30
+    }
+  ],
+  "pair": [
+    {
+      "id": "login",
+      "navigation": {
+        "next": "list_devices"
+      }
+    },
+    {
+      "id": "list_devices",
+      "template": "list_devices",
+      "navigation": {
+        "next": "add_devices"
+      }
+    },
+    {
+      "id": "add_devices",
+      "template": "add_devices"
+    }
+  ]
+}

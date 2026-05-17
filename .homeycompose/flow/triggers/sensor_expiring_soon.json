@@ -1,0 +1,16 @@
+{
+  "title": {
+    "en": "Sensor is expiring soon",
+    "de": "Sensor läuft bald ab"
+  },
+  "tokens": [
+    {
+      "name": "hours_remaining",
+      "type": "number",
+      "title": {
+        "en": "Hours remaining",
+        "de": "Verbleibende Stunden"
+      }
+    }
+  ]
+}

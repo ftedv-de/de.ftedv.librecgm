@@ -1,0 +1,18 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Glucose delta",
+    "de": "Glukoseänderung"
+  },
+  "units": {
+    "en": "mmol/L",
+    "de": "mmol/L"
+  },
+  "decimals": 1,
+  "min": -12,
+  "max": 12,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/capabilities/measure_glucose_delta_mmol.svg"
+}

@@ -1,0 +1,18 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Sensor expiry",
+    "de": "Sensor läuft ab in"
+  },
+  "units": {
+    "en": "h",
+    "de": "h"
+  },
+  "decimals": 0,
+  "min": 0,
+  "max": 400,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/capabilities/sensor_expiry_hours.svg"
+}

@@ -1,0 +1,24 @@
+{
+  "title": {
+    "en": "Glucose became high",
+    "de": "Glukose wurde hoch"
+  },
+  "tokens": [
+    {
+      "name": "glucose_mgdl",
+      "type": "number",
+      "title": {
+        "en": "Glucose mg/dL",
+        "de": "Glukose mg/dL"
+      }
+    },
+    {
+      "name": "glucose_mmol",
+      "type": "number",
+      "title": {
+        "en": "Glukose mmol/L",
+        "de": "Glukose mmol/L"
+      }
+    }
+  ]
+}

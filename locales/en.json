@@ -1,0 +1,9 @@
+{
+  "settings": {
+    "debug": {
+      "title": "Debug",
+      "enable": "Enable debug logging",
+      "description": "Enable debug logging before generating a diagnostics report. Disable it again afterwards to reduce unnecessary log output."
+    }
+  }
+}

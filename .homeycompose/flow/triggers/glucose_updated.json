@@ -1,0 +1,32 @@
+{
+  "title": {
+    "en": "Glucose value updated",
+    "de": "Glukosewert aktualisiert"
+  },
+  "tokens": [
+    {
+      "name": "glucose_mgdl",
+      "type": "number",
+      "title": {
+        "en": "Glucose mg/dL",
+        "de": "Glukose mg/dL"
+      }
+    },
+    {
+      "name": "glucose_mmol",
+      "type": "number",
+      "title": {
+        "en": "Glucose mmol/L",
+        "de": "Glukose mmol/L"
+      }
+    },
+    {
+      "name": "trend",
+      "type": "string",
+      "title": {
+        "en": "Trend",
+        "de": "Trend"
+      }
+    }
+  ]
+}

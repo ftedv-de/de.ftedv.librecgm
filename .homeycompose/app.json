@@ -1,0 +1,154 @@
+{
+  "id": "de.ftedv.librecgm",
+  "version": "1.1.3",
+  "compatibility": ">=12.4.0",
+  "sdk": 3,
+  "runtime": "nodejs",
+  "platforms": [
+    "local"
+  ],
+  "name": {
+    "en": "Libre CGM"
+  },
+  "description": {
+    "en": "Adds support for libre constant glucose monitors"
+  },
+  "category": [
+    "internet"
+  ],
+  "brandColor": "#ff8f00",
+  "tags": {
+    "en": [
+      "diabetes",
+      "glucose",
+      "cgm",
+      "libreview",
+      "freestyle libre",
+      "sensor"
+    ]
+  },
+  "permissions": [],
+  "images": {
+    "small": "/assets/images/small.png",
+    "large": "/assets/images/large.png"
+  },
+  "author": {
+    "name": "Florian Trück",
+    "email": "ftrueck@gmail.com"
+  },
+  "capabilities": {
+    "measure_glucose": {
+      "type": "number",
+      "title": {
+        "en": "Glucose"
+      },
+      "units": {
+        "en": "mg/dL"
+      },
+      "decimals": 0,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "chartType": "line"
+    },
+    "measure_glucose_delta": {
+      "type": "number",
+      "title": {
+        "en": "Glucose delta"
+      },
+      "units": {
+        "en": "mg/dL"
+      },
+      "decimals": 0,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "chartType": "line"
+    },
+    "measure_glucose_trend": {
+      "type": "string",
+      "title": {
+        "en": "Trend"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor"
+    },
+    "meter_sensor_expires_in": {
+      "type": "number",
+      "title": {
+        "en": "Sensor expires in"
+      },
+      "units": {
+        "en": "h"
+      },
+      "decimals": 0,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "chartType": "line"
+    },
+    "alarm_glucose_high": {
+      "type": "boolean",
+      "title": {
+        "en": "Glucose high alarm"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor"
+    },
+    "alarm_glucose_low": {
+      "type": "boolean",
+      "title": {
+        "en": "Glucose low alarm"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor"
+    }
+  },
+  "drivers": [
+    {
+      "id": "glucose_person",
+      "name": {
+        "en": "LibreView Person"
+      },
+      "class": "sensor",
+      "capabilities": [
+        "measure_glucose",
+        "measure_glucose_delta",
+        "measure_glucose_trend",
+        "meter_sensor_expires_in",
+        "alarm_glucose_high",
+        "alarm_glucose_low",
+        "alarm_battery"
+      ],
+      "pair": [
+        {
+          "id": "login",
+          "template": "login"
+        },
+        {
+          "id": "list_devices",
+          "template": "list_devices"
+        }
+      ],
+      "settings": []
+    }
+  ],
+  "support": "mailto: ftrueck@gmail.com",
+  "homeyCommunityTopicId": 155006,
+  "contributing": {
+    "donate": {
+      "paypal": {
+        "username": "ftrueck"
+      },
+      "bunq": {
+        "username": "ftrueck"
+      },
+      "patreon": {
+        "username": "ftrueck"
+      }
+    }
+  }
+}

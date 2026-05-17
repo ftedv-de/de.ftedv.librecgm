@@ -1,0 +1,17 @@
+{
+  "1.0.0": {
+    "en": "First version!"
+  },
+  "1.1.0": {
+    "en": "Added icons and debug setting"
+  },
+  "1.1.1": {
+    "en": "added support info and community topic"
+  },
+  "1.1.2": {
+    "en": "Added missing insight for glucose"
+  },
+  "1.1.3": {
+    "en": "Minor things"
+  }
+}

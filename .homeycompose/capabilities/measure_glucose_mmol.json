@@ -1,0 +1,19 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Glucose",
+    "de": "Glukose"
+  },
+  "units": {
+    "en": "mmol/L",
+    "de": "mmol/L"
+  },
+  "decimals": 1,
+  "min": 0,
+  "max": 30,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "insights": true,
+  "icon": "/assets/capabilities/measure_glucose_mmol.svg"
+}

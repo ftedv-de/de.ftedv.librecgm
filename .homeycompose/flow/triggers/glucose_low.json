@@ -1,0 +1,24 @@
+{
+  "title": {
+    "en": "Glucose became low",
+    "de": "Glukose wurde niedrig"
+  },
+  "tokens": [
+    {
+      "name": "glucose_mgdl",
+      "type": "number",
+      "title": {
+        "en": "Glucose mg/dL",
+        "de": "Glukose mg/dL"
+      }
+    },
+    {
+      "name": "glucose_mmol",
+      "type": "number",
+      "title": {
+        "en": "Glucose mmol/L",
+        "de": "Glukose mmol/L"
+      }
+    }
+  ]
+}
