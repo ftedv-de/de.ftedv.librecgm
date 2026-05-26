@@ -63,7 +63,7 @@ module.exports = class LibreViewDevice extends Homey.Device {
       throw new Error('Missing patientId');
     }
 
-    const sensorLifetimeDays = this.getSetting('sensor_lifetime_days') ?? 16;
+    const sensorLifetimeDays = this.getSetting('sensor_lifetime_days') ?? 15;
     const reading = await this.client.getConnectionReading(patientId, {
       sensorLifetimeDays
     });
@@ -80,7 +80,6 @@ module.exports = class LibreViewDevice extends Homey.Device {
 
     const isLow =
       reading.valueMgDl < reading.targetLowMgDl;
-
 
     // ###############################
     // ### Measurements
@@ -110,6 +109,8 @@ module.exports = class LibreViewDevice extends Homey.Device {
       reading.trend
     );
 
+    
+
     // ###############################
     // ### Sensor Expiry
     // ###############################
@@ -128,6 +129,10 @@ module.exports = class LibreViewDevice extends Homey.Device {
       reading.sensorExpiryHours <= 24;
 
     await this.setStoreValue('sensorExpiringSoon', sensorExpiringSoon);
+    await this.setCapabilityValue(
+      'alarm_sensor_expiry',
+      sensorExpiringSoon
+    );
 
     if (!previousSensorExpiringSoon && sensorExpiringSoon) {
       await this.homey.flow
