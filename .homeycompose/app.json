@@ -1,6 +1,6 @@
 {
   "id": "de.ftedv.librecgm",
-  "version": "1.1.5",
+  "version": "1.1.6",
   "compatibility": ">=12.4.0",
   "sdk": 3,
   "runtime": "nodejs",
@@ -8,10 +8,12 @@
     "local"
   ],
   "name": {
-    "en": "Libre CGM"
+    "en": "Freestyle Libre",
+    "de": "Freestyle Libre"
   },
   "description": {
-    "en": "Adds support for libre constant glucose monitors"
+    "en": "Meet the FreeStyle Libre 3 Plus sensor",
+    "de": "Entdecken Sie den Libre 3 Plus Sensor"
   },
   "category": [
     "internet"
@@ -105,6 +107,15 @@
       "getable": true,
       "setable": false,
       "uiComponent": "sensor"
+    },
+    "alarm_sensor_expiry": {
+      "type": "boolean",
+      "title": {
+        "en": "Sensor expires soon"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor"
     }
   },
   "drivers": [
@@ -121,7 +132,8 @@
         "meter_sensor_expires_in",
         "alarm_glucose_high",
         "alarm_glucose_low",
-        "alarm_battery"
+        "alarm_battery",
+        "alarm_sensor_expiry"
       ],
       "pair": [
         {
