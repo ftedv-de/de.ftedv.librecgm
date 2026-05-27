@@ -25,5 +25,8 @@
   },
   "1.2.0": {
     "en": "Added widgets for history stats and graph"
+  },
+  "1.2.1": {
+    "en": "Added device selection in widget config"
   }
 }
