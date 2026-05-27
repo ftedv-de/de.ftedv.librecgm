@@ -1,0 +1,12 @@
+{
+  "name": {
+    "en": "Glucose history",
+    "de": "Glukoseverlauf"
+  },
+  "description": {
+    "en": "Shows the glucose history of the last 24 hours.",
+    "de": "Zeigt den Glukoseverlauf der letzten 24 Stunden."
+  },
+  "api": true,
+  "settings": []
+}
