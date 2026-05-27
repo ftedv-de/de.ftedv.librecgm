@@ -20,4 +20,28 @@ module.exports = class LibreCGM extends Homey.App {
       this.log('[debug]', ...args);
     }
   }
+
+  getGlucoseDeviceById(deviceId) {
+    const driver = this.homey.drivers.getDriver('glucose_person');
+    const devices = driver.getDevices();
+
+    if (!deviceId) {
+      return devices[0] ?? null;
+    }
+
+    return devices.find(device =>
+      device.getId?.() === deviceId ||
+      device.getData()?.id === deviceId
+    ) ?? null;
+  }
+
+  async getGlucoseDashboardData(deviceId) {
+    const device = this.getGlucoseDeviceById(deviceId);
+
+    if (!device) {
+      throw new Error('No LibreView patient device found');
+    }
+
+    return device.getDashboardData();
+  }
 };
