@@ -68,7 +68,6 @@ module.exports = class LibreViewDevice extends Homey.Device {
       sensorLifetimeDays
     });
 
-
     const previousHigh =
       this.getCapabilityValue('alarm_glucose_high');
 
@@ -81,9 +80,6 @@ module.exports = class LibreViewDevice extends Homey.Device {
     const isLow =
       reading.valueMgDl < reading.targetLowMgDl;
 
-    // ###############################
-    // ### Measurements
-    // ###############################
     await this.setCapabilityValue(
       'measure_glucose_mgdl',
       reading.valueMgDl
@@ -109,11 +105,6 @@ module.exports = class LibreViewDevice extends Homey.Device {
       reading.trend
     );
 
-    
-
-    // ###############################
-    // ### Sensor Expiry
-    // ###############################
     if (reading.sensorExpiryHours !== null) {
       await this.setCapabilityValue(
         'sensor_expiry_hours',
@@ -129,6 +120,7 @@ module.exports = class LibreViewDevice extends Homey.Device {
       reading.sensorExpiryHours <= 24;
 
     await this.setStoreValue('sensorExpiringSoon', sensorExpiringSoon);
+
     await this.setCapabilityValue(
       'alarm_sensor_expiry',
       sensorExpiringSoon
@@ -142,9 +134,6 @@ module.exports = class LibreViewDevice extends Homey.Device {
         });
     }
 
-    // ###############################
-    // ### Glucose high / low
-    // ###############################
     await this.setCapabilityValue(
       'alarm_glucose_high',
       isHigh
@@ -175,12 +164,17 @@ module.exports = class LibreViewDevice extends Homey.Device {
 
     await this.setStoreValue('auth', this.client.exportAuth());
 
-    await this.setStoreValue('lastReading', {
+    const lastReading = {
       timestamp: reading.timestamp,
       valueMgDl: reading.valueMgDl,
       valueMmol: reading.valueMmol,
       trend: reading.trend,
-    });
+      trendArrow: reading.trendArrow,
+    };
+
+    await this.setStoreValue('lastReading', lastReading);
+
+    await this.addGlucoseHistoryEntry(lastReading);
 
     await this.setAvailable();
 
@@ -195,6 +189,76 @@ module.exports = class LibreViewDevice extends Homey.Device {
     this.homey.app.debug(
       `Updated glucose value: ${reading.valueMgDl} mg/dL (${reading.valueMmol} mmol/L)`
     );
+  }
+
+  async addGlucoseHistoryEntry(entry) {
+    const now = Date.now();
+    const cutoff = now - 24 * 60 * 60 * 1000;
+
+    const timestamp = new Date(entry.timestamp).getTime();
+
+    if (!Number.isFinite(timestamp)) {
+      return;
+    }
+
+    const history = Array.isArray(this.getStoreValue('glucoseHistory24h'))
+      ? this.getStoreValue('glucoseHistory24h')
+      : [];
+
+    const filtered = history
+      .filter(item => {
+        const t = new Date(item.timestamp).getTime();
+        return Number.isFinite(t) && t >= cutoff;
+      })
+      .filter(item => item.timestamp !== entry.timestamp);
+
+    filtered.push(entry);
+
+    filtered.sort((a, b) =>
+      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
+
+    await this.setStoreValue('glucoseHistory24h', filtered);
+  }
+
+  getDashboardData() {
+    const history = Array.isArray(this.getStoreValue('glucoseHistory24h'))
+      ? this.getStoreValue('glucoseHistory24h')
+      : [];
+
+    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+
+    const points = history
+      .filter(item => {
+        const t = new Date(item.timestamp).getTime();
+        return Number.isFinite(t) && t >= cutoff;
+      })
+      .map(item => ({
+        timestamp: item.timestamp,
+        valueMgDl: item.valueMgDl,
+        valueMmol: item.valueMmol,
+        trend: item.trend,
+        trendArrow: item.trendArrow,
+      }));
+
+    const values = points
+      .map(item => item.valueMgDl)
+      .filter(value => Number.isFinite(value));
+
+    const lastReading = this.getStoreValue('lastReading') ?? points.at(-1) ?? null;
+
+    return {
+      deviceName: this.getName(),
+      current: lastReading,
+      history: points,
+      stats: {
+        minMgDl: values.length ? Math.min(...values) : null,
+        maxMgDl: values.length ? Math.max(...values) : null,
+        avgMgDl: values.length
+          ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length)
+          : null,
+      },
+    };
   }
 
   async onSettings({ oldSettings, newSettings, changedKeys }) {
