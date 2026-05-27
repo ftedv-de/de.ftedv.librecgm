@@ -1,0 +1,170 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {
+      margin: 0;
+      padding: 12px;
+      font-family: system-ui, sans-serif;
+      color: var(--homey-text-color, #fff);
+      background: transparent;
+    }
+
+    .current {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      font-size: 32px;
+      font-weight: 700;
+    }
+
+    .unit {
+      font-size: 14px;
+      opacity: .75;
+    }
+
+    .trend {
+      font-size: 30px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin: 12px 0;
+      font-size: 13px;
+    }
+
+    .stat {
+      opacity: .9;
+    }
+
+    .label {
+      opacity: .6;
+      font-size: 11px;
+    }
+
+    canvas {
+      width: 100%;
+      height: 120px;
+    }
+
+    .empty {
+      opacity: .7;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div id="content" class="empty">Lade Werte…</div>
+
+  <script type="text/javascript" src="/homey.js" data-origin="widget"></script>
+  <script>
+    const trendMap = {
+      falling_quickly: '↓',
+      falling: '↘',
+      flat: '→',
+      rising: '↗',
+      rising_quickly: '↑',
+      unknown: '–',
+    };
+
+    function drawChart(canvas, points) {
+      const ctx = canvas.getContext('2d');
+      const width = canvas.clientWidth;
+      const height = canvas.clientHeight;
+
+      canvas.width = width * devicePixelRatio;
+      canvas.height = height * devicePixelRatio;
+
+      ctx.scale(devicePixelRatio, devicePixelRatio);
+      ctx.clearRect(0, 0, width, height);
+
+      if (points.length < 2) {
+        return;
+      }
+
+      const values = points.map(p => p.valueMgDl);
+      const min = Math.min(...values);
+      const max = Math.max(...values);
+      const range = Math.max(1, max - min);
+
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+
+      points.forEach((point, index) => {
+        const x = (index / (points.length - 1)) * width;
+        const y = height - ((point.valueMgDl - min) / range) * height;
+
+        if (index === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      });
+
+      ctx.strokeStyle = 'currentColor';
+      ctx.stroke();
+    }
+
+    function render(data) {
+      const content = document.getElementById('content');
+      const current = data.current;
+      const history = data.history || [];
+      const stats = data.stats || {};
+
+      if (!current) {
+        content.className = 'empty';
+        content.textContent = 'Noch keine Glukosewerte vorhanden.';
+        return;
+      }
+
+      content.className = '';
+
+      content.innerHTML = `
+        <div class="current">
+          <span>${Math.round(current.valueMgDl)}</span>
+          <span class="unit">mg/dL</span>
+          <span class="trend">${trendMap[current.trend] || '–'}</span>
+        </div>
+
+        <div class="stats">
+          <div class="stat"><div class="label">Min</div>${stats.minMgDl ?? '–'}</div>
+          <div class="stat"><div class="label">Ø</div>${stats.avgMgDl ?? '–'}</div>
+          <div class="stat"><div class="label">Max</div>${stats.maxMgDl ?? '–'}</div>
+        </div>
+
+        <canvas id="chart"></canvas>
+      `;
+
+      drawChart(document.getElementById('chart'), history);
+    }
+
+    async function refresh() {
+      const deviceIds = await Homey.getDeviceIds();
+      const deviceId = Array.isArray(deviceIds) ? deviceIds[0] : null;
+
+      Homey.api(
+        'GET',
+        `/getGlucoseHistory?deviceId=${encodeURIComponent(deviceId || '')}`,
+        null,
+        (err, data) => {
+          if (err) {
+            document.getElementById('content').textContent = err.message || String(err);
+            return;
+          }
+
+          render(data);
+        }
+      );
+    }
+
+    Homey.ready();
+
+    refresh();
+
+    setInterval(refresh, 60 * 1000);
+  </script>
+</body>
+</html>
