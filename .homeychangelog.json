@@ -28,5 +28,8 @@
   },
   "1.2.1": {
     "en": "Added device selection in widget config"
+  },
+  "1.2.2": {
+    "en": "Added setting for widgets to choose glucose unit"
   }
 }
