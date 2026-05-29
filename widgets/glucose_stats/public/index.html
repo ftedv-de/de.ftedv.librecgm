@@ -1,0 +1,219 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+
+  <style>
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      font-family: system-ui, sans-serif;
+      background: transparent;
+      color: var(--homey-text-color, #fff);
+      box-sizing: border-box;
+    }
+
+    * { box-sizing: border-box; }
+
+    body { padding: 10px; }
+
+    #content {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+    }
+
+    .current {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      flex-shrink: 0;
+      min-width: 160px;
+    }
+
+    .value {
+      font-size: 26px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .unit {
+      font-size: 13px;
+      opacity: .7;
+    }
+
+    .trend {
+      font-size: 24px;
+      line-height: 1;
+    }
+
+    .stats-group {
+      flex: 1;
+      display: flex;
+      justify-content: space-around;
+      gap: 18px;
+    }
+
+    .stat {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .label {
+      font-size: 10px;
+      opacity: .6;
+      text-transform: uppercase;
+    }
+
+    .stat-value {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      opacity: .7;
+      font-size: 14px;
+      text-align: center;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="content" class="empty">
+    Lade Werte…
+  </div>
+
+  <script type="text/javascript">
+    function onHomeyReady(Homey) {
+      const trendMap = {
+        falling_quickly: '↓',
+        falling: '↘',
+        flat: '→',
+        rising: '↗',
+        rising_quickly: '↑',
+        unknown: '–',
+      };
+
+      function getUnitSettings() {
+        const settings = Homey.getSettings();
+        const unit = settings.glucose_unit || 'mgdl';
+
+        return {
+          unit,
+          label: unit === 'mmol' ? 'mmol/L' : 'mg/dL',
+          valueKey: unit === 'mmol' ? 'valueMmol' : 'valueMgDl',
+          statSuffix: unit === 'mmol' ? 'Mmol' : 'MgDl',
+          decimals: unit === 'mmol' ? 1 : 0,
+        };
+      }
+
+      function formatValue(value, decimals) {
+        if (!Number.isFinite(value)) return '–';
+        return Number(value).toFixed(decimals);
+      }
+
+      function render(data) {
+        const content = document.getElementById('content');
+        const current = data.current;
+        const stats = data.stats || {};
+        const unitSettings = getUnitSettings();
+
+        if (!current) {
+          content.className = 'empty';
+          content.textContent = 'Noch keine Glukosewerte vorhanden.';
+          return;
+        }
+
+        content.className = '';
+
+        content.innerHTML = `
+          <div class="current">
+            <span class="value">
+              ${formatValue(current[unitSettings.valueKey], unitSettings.decimals)}
+            </span>
+
+            <span class="unit">
+              ${unitSettings.label}
+            </span>
+
+            <span class="trend">
+              ${trendMap[current.trend] || '–'}
+            </span>
+          </div>
+
+          <div class="stats-group">
+            <div class="stat">
+              <div class="label">Min</div>
+              <div class="stat-value">
+                ${formatValue(stats[`min${unitSettings.statSuffix}`], unitSettings.decimals)}
+              </div>
+            </div>
+
+            <div class="stat">
+              <div class="label">Ø</div>
+              <div class="stat-value">
+                ${formatValue(stats[`avg${unitSettings.statSuffix}`], unitSettings.decimals)}
+              </div>
+            </div>
+
+            <div class="stat">
+              <div class="label">Max</div>
+              <div class="stat-value">
+                ${formatValue(stats[`max${unitSettings.statSuffix}`], unitSettings.decimals)}
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      async function refresh() {
+        try {
+          const deviceIds = await Homey.getDeviceIds();
+
+          const deviceId =
+            Array.isArray(deviceIds)
+              ? deviceIds[0]
+              : deviceIds;
+
+          const data = await Homey.api(
+            'GET',
+            `/getGlucoseHistory?deviceId=${encodeURIComponent(deviceId || '')}`
+          );
+
+          render(data);
+        } catch (err) {
+          const content = document.getElementById('content');
+          content.className = 'empty';
+          content.textContent = err.message || String(err);
+        }
+      }
+
+      Homey.ready();
+
+      refresh();
+
+      Homey.on('settings', () => {
+        refresh();
+      });
+
+      setInterval(refresh, 60 * 1000);
+    }
+  </script>
+
+  <script src="/homey.js" data-origin="widget"></script>
+</body>
+</html>

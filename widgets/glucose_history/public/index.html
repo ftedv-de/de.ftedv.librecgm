@@ -2,169 +2,364 @@
 <html>
 <head>
   <meta charset="utf-8">
+
   <style>
+    html,
     body {
+      width: 100%;
+      height: 100%;
       margin: 0;
-      padding: 12px;
+      padding: 0;
+      overflow: hidden;
       font-family: system-ui, sans-serif;
-      color: var(--homey-text-color, #fff);
       background: transparent;
+      color: var(--homey-text-color, #fff);
+      box-sizing: border-box;
+    }
+
+    * { box-sizing: border-box; }
+
+    body { padding: 10px; }
+
+    #content {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .current-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 10px;
+      flex-shrink: 0;
     }
 
     .current {
       display: flex;
       align-items: baseline;
-      gap: 10px;
-      font-size: 32px;
+      gap: 6px;
+      flex-shrink: 0;
+      min-width: 160px;
+    }
+
+    .value {
+      font-size: 26px;
       font-weight: 700;
+      line-height: 1;
     }
 
     .unit {
-      font-size: 14px;
-      opacity: .75;
+      font-size: 13px;
+      opacity: .7;
     }
 
     .trend {
-      font-size: 30px;
+      font-size: 24px;
+      line-height: 1;
     }
 
-    .stats {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-      margin: 12px 0;
-      font-size: 13px;
+    .stats-group {
+      flex: 1;
+      display: flex;
+      justify-content: space-around;
+      gap: 18px;
     }
 
     .stat {
-      opacity: .9;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
     }
 
     .label {
+      font-size: 10px;
       opacity: .6;
-      font-size: 11px;
+      text-transform: uppercase;
+    }
+
+    .stat-value {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .chart-container {
+      flex: 1;
+      min-height: 0;
+      position: relative;
     }
 
     canvas {
       width: 100%;
-      height: 120px;
+      height: 100%;
+      display: block;
     }
 
     .empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
       opacity: .7;
       font-size: 14px;
+      text-align: center;
     }
   </style>
 </head>
+
 <body>
   <div id="content" class="empty">Lade Werte…</div>
 
-  <script type="text/javascript" src="/homey.js" data-origin="widget"></script>
-  <script>
-    const trendMap = {
-      falling_quickly: '↓',
-      falling: '↘',
-      flat: '→',
-      rising: '↗',
-      rising_quickly: '↑',
-      unknown: '–',
-    };
+  <script type="text/javascript">
+    function onHomeyReady(Homey) {
+      const trendMap = {
+        falling_quickly: '↓',
+        falling: '↘',
+        flat: '→',
+        rising: '↗',
+        rising_quickly: '↑',
+        unknown: '–',
+      };
 
-    function drawChart(canvas, points) {
-      const ctx = canvas.getContext('2d');
-      const width = canvas.clientWidth;
-      const height = canvas.clientHeight;
+      function getUnitSettings() {
+        const settings = Homey.getSettings();
+        const unit = settings.glucose_unit || 'mgdl';
 
-      canvas.width = width * devicePixelRatio;
-      canvas.height = height * devicePixelRatio;
-
-      ctx.scale(devicePixelRatio, devicePixelRatio);
-      ctx.clearRect(0, 0, width, height);
-
-      if (points.length < 2) {
-        return;
+        return {
+          unit,
+          label: unit === 'mmol' ? 'mmol/L' : 'mg/dL',
+          valueKey: unit === 'mmol' ? 'valueMmol' : 'valueMgDl',
+          statSuffix: unit === 'mmol' ? 'Mmol' : 'MgDl',
+          decimals: unit === 'mmol' ? 1 : 0,
+        };
       }
 
-      const values = points.map(p => p.valueMgDl);
-      const min = Math.min(...values);
-      const max = Math.max(...values);
-      const range = Math.max(1, max - min);
+      function formatValue(value, decimals) {
+        if (!Number.isFinite(value)) return '–';
+        return Number(value).toFixed(decimals);
+      }
 
-      ctx.lineWidth = 2;
-      ctx.beginPath();
+      function drawChart(canvas, points, unitSettings) {
+        const ctx = canvas.getContext('2d');
+        const width = canvas.clientWidth;
+        const height = canvas.clientHeight;
 
-      points.forEach((point, index) => {
-        const x = (index / (points.length - 1)) * width;
-        const y = height - ((point.valueMgDl - min) / range) * height;
+        canvas.width = width * devicePixelRatio;
+        canvas.height = height * devicePixelRatio;
 
-        if (index === 0) {
-          ctx.moveTo(x, y);
-        } else {
-          ctx.lineTo(x, y);
+        ctx.scale(devicePixelRatio, devicePixelRatio);
+        ctx.clearRect(0, 0, width, height);
+
+        const validPoints = points
+          .map(point => ({
+            ...point,
+            time: new Date(point.timestamp).getTime(),
+            chartValue: Number(point[unitSettings.valueKey]),
+          }))
+          .filter(point =>
+            Number.isFinite(point.time) &&
+            Number.isFinite(point.chartValue)
+          );
+
+        if (validPoints.length < 2) return;
+
+        const paddingLeft = 42;
+        const paddingBottom = 18;
+        const paddingTop = 6;
+        const paddingRight = 6;
+
+        const chartWidth = width - paddingLeft - paddingRight;
+        const chartHeight = height - paddingTop - paddingBottom;
+
+        const values = validPoints.map(point => point.chartValue);
+        const min = Math.min(...values);
+        const max = Math.max(...values);
+        const range = Math.max(0.1, max - min);
+
+        ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+        ctx.lineWidth = 1;
+
+        for (let i = 0; i < 3; i++) {
+          const y = paddingTop + (chartHeight / 2) * i;
+
+          ctx.beginPath();
+          ctx.moveTo(paddingLeft, y);
+          ctx.lineTo(width - paddingRight, y);
+          ctx.stroke();
         }
-      });
 
-      ctx.strokeStyle = 'currentColor';
-      ctx.stroke();
-    }
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        ctx.font = '10px system-ui';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
 
-    function render(data) {
-      const content = document.getElementById('content');
-      const current = data.current;
-      const history = data.history || [];
-      const stats = data.stats || {};
+        [
+          max,
+          (max + min) / 2,
+          min,
+        ].forEach((value, index) => {
+          const y = paddingTop + (chartHeight / 2) * index;
 
-      if (!current) {
-        content.className = 'empty';
-        content.textContent = 'Noch keine Glukosewerte vorhanden.';
-        return;
+          ctx.fillText(
+            formatValue(value, unitSettings.decimals),
+            paddingLeft - 6,
+            y
+          );
+        });
+
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+
+        ['24h', '12h', 'Jetzt'].forEach((label, index) => {
+          const x = paddingLeft + (chartWidth / 2) * index;
+
+          ctx.fillText(
+            label,
+            x,
+            height - paddingBottom + 4
+          );
+        });
+
+        const now = Date.now();
+        const start = now - 24 * 60 * 60 * 1000;
+        const timeRange = now - start;
+
+        ctx.lineWidth = 1.5;
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+
+        let started = false;
+
+        validPoints.forEach(point => {
+          if (point.time < start || point.time > now) return;
+
+          const x =
+            paddingLeft +
+            ((point.time - start) / timeRange) * chartWidth;
+
+          const y =
+            paddingTop +
+            chartHeight -
+            ((point.chartValue - min) / range) * chartHeight;
+
+          if (!started) {
+            ctx.moveTo(x, y);
+            started = true;
+          } else {
+            ctx.lineTo(x, y);
+          }
+        });
+
+        ctx.strokeStyle = '#ff9800';
+        ctx.stroke();
       }
 
-      content.className = '';
+      function render(data) {
+        const content = document.getElementById('content');
+        const current = data.current;
+        const history = data.history || [];
+        const stats = data.stats || {};
+        const unitSettings = getUnitSettings();
 
-      content.innerHTML = `
-        <div class="current">
-          <span>${Math.round(current.valueMgDl)}</span>
-          <span class="unit">mg/dL</span>
-          <span class="trend">${trendMap[current.trend] || '–'}</span>
-        </div>
+        if (!current) {
+          content.className = 'empty';
+          content.textContent = 'Noch keine Glukosewerte vorhanden.';
+          return;
+        }
 
-        <div class="stats">
-          <div class="stat"><div class="label">Min</div>${stats.minMgDl ?? '–'}</div>
-          <div class="stat"><div class="label">Ø</div>${stats.avgMgDl ?? '–'}</div>
-          <div class="stat"><div class="label">Max</div>${stats.maxMgDl ?? '–'}</div>
-        </div>
+        content.className = '';
 
-        <canvas id="chart"></canvas>
-      `;
+        content.innerHTML = `
+          <div class="current-row">
+            <div class="current">
+              <span class="value">
+                ${formatValue(current[unitSettings.valueKey], unitSettings.decimals)}
+              </span>
 
-      drawChart(document.getElementById('chart'), history);
-    }
+              <span class="unit">
+                ${unitSettings.label}
+              </span>
 
-    async function refresh() {
-      const deviceIds = await Homey.getDeviceIds();
-      const deviceId = Array.isArray(deviceIds) ? deviceIds[0] : null;
+              <span class="trend">
+                ${trendMap[current.trend] || '–'}
+              </span>
+            </div>
 
-      Homey.api(
-        'GET',
-        `/getGlucoseHistory?deviceId=${encodeURIComponent(deviceId || '')}`,
-        null,
-        (err, data) => {
-          if (err) {
-            document.getElementById('content').textContent = err.message || String(err);
-            return;
-          }
+            <div class="stats-group">
+              <div class="stat">
+                <div class="label">Min</div>
+                <div class="stat-value">
+                  ${formatValue(stats[`min${unitSettings.statSuffix}`], unitSettings.decimals)}
+                </div>
+              </div>
+
+              <div class="stat">
+                <div class="label">Ø</div>
+                <div class="stat-value">
+                  ${formatValue(stats[`avg${unitSettings.statSuffix}`], unitSettings.decimals)}
+                </div>
+              </div>
+
+              <div class="stat">
+                <div class="label">Max</div>
+                <div class="stat-value">
+                  ${formatValue(stats[`max${unitSettings.statSuffix}`], unitSettings.decimals)}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="chart-container">
+            <canvas id="chart"></canvas>
+          </div>
+        `;
+
+        drawChart(
+          document.getElementById('chart'),
+          history,
+          unitSettings
+        );
+      }
+
+      async function refresh() {
+        try {
+          const deviceIds = await Homey.getDeviceIds();
+
+          const deviceId =
+            Array.isArray(deviceIds)
+              ? deviceIds[0]
+              : deviceIds;
+
+          const data = await Homey.api(
+            'GET',
+            `/getGlucoseHistory?deviceId=${encodeURIComponent(deviceId || '')}`
+          );
 
           render(data);
+        } catch (err) {
+          const content = document.getElementById('content');
+          content.className = 'empty';
+          content.textContent = err.message || String(err);
         }
-      );
+      }
+
+      Homey.ready();
+
+      refresh();
+
+      Homey.on('settings', () => {
+        refresh();
+      });
+
+      setInterval(refresh, 60 * 1000);
     }
-
-    Homey.ready();
-
-    refresh();
-
-    setInterval(refresh, 60 * 1000);
   </script>
+
+  <script src="/homey.js" data-origin="widget"></script>
 </body>
 </html>

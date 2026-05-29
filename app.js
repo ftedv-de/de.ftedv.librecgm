@@ -4,9 +4,6 @@ const Homey = require('homey');
 
 module.exports = class LibreCGM extends Homey.App {
 
-  /**
-   * onInit is called when the app is initialized.
-   */
   async onInit() {
     this.log('LibreCGM has been initialized');
   }
@@ -44,4 +41,5 @@ module.exports = class LibreCGM extends Homey.App {
 
     return device.getDashboardData();
   }
+
 };

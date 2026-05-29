@@ -64,6 +64,7 @@ module.exports = class LibreViewDevice extends Homey.Device {
     }
 
     const sensorLifetimeDays = this.getSetting('sensor_lifetime_days') ?? 15;
+
     const reading = await this.client.getConnectionReading(patientId, {
       sensorLifetimeDays
     });
@@ -215,10 +216,14 @@ module.exports = class LibreViewDevice extends Homey.Device {
     filtered.push(entry);
 
     filtered.sort((a, b) =>
-      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+      new Date(a.timestamp).getTime() -
+      new Date(b.timestamp).getTime()
     );
 
-    await this.setStoreValue('glucoseHistory24h', filtered);
+    await this.setStoreValue(
+      'glucoseHistory24h',
+      filtered
+    );
   }
 
   getDashboardData() {
@@ -226,7 +231,8 @@ module.exports = class LibreViewDevice extends Homey.Device {
       ? this.getStoreValue('glucoseHistory24h')
       : [];
 
-    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+    const cutoff =
+      Date.now() - 24 * 60 * 60 * 1000;
 
     const points = history
       .filter(item => {
@@ -241,21 +247,54 @@ module.exports = class LibreViewDevice extends Homey.Device {
         trendArrow: item.trendArrow,
       }));
 
-    const values = points
+    const valuesMgDl = points
       .map(item => item.valueMgDl)
       .filter(value => Number.isFinite(value));
 
-    const lastReading = this.getStoreValue('lastReading') ?? points.at(-1) ?? null;
+    const valuesMmol = points
+      .map(item => item.valueMmol)
+      .filter(value => Number.isFinite(value));
+
+    const lastReading =
+      this.getStoreValue('lastReading') ??
+      points.at(-1) ??
+      null;
 
     return {
       deviceName: this.getName(),
       current: lastReading,
       history: points,
       stats: {
-        minMgDl: values.length ? Math.min(...values) : null,
-        maxMgDl: values.length ? Math.max(...values) : null,
-        avgMgDl: values.length
-          ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length)
+        minMgDl: valuesMgDl.length
+          ? Math.min(...valuesMgDl)
+          : null,
+
+        maxMgDl: valuesMgDl.length
+          ? Math.max(...valuesMgDl)
+          : null,
+
+        avgMgDl: valuesMgDl.length
+          ? Math.round(
+              valuesMgDl.reduce((sum, value) => sum + value, 0) /
+              valuesMgDl.length
+            )
+          : null,
+
+        minMmol: valuesMmol.length
+          ? Math.min(...valuesMmol)
+          : null,
+
+        maxMmol: valuesMmol.length
+          ? Math.max(...valuesMmol)
+          : null,
+
+        avgMmol: valuesMmol.length
+          ? Math.round(
+              (
+                valuesMmol.reduce((sum, value) => sum + value, 0) /
+                valuesMmol.length
+              ) * 10
+            ) / 10
           : null,
       },
     };
