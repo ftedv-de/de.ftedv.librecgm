@@ -31,5 +31,8 @@
   },
   "1.2.2": {
     "en": "Added setting for widgets to choose glucose unit"
+  },
+  "1.2.3": {
+    "en": "Enabled insights for glucose mmol"
   }
 }

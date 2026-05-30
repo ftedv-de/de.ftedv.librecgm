@@ -1,6 +1,6 @@
 {
   "id": "de.ftedv.librecgm",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "compatibility": ">=12.4.0",
   "sdk": 3,
   "runtime": "nodejs",
