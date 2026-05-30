@@ -21,7 +21,7 @@
       "preventInsights": false
     },
     "measure_glucose_mmol": {
-      "preventInsights": true
+      "preventInsights": false
     },
     "measure_glucose_delta_mgdl": {
       "preventInsights": true
