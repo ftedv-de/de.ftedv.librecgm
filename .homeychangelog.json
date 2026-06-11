@@ -34,5 +34,11 @@
   },
   "1.2.3": {
     "en": "Enabled insights for glucose mmol"
+  },
+  "1.2.4": {
+    "en": "Added sensor serial number as displayed value in device details"
+  },
+  "1.2.5": {
+    "en": "Added sensor serial (no re-pair needed)"
   }
 }
