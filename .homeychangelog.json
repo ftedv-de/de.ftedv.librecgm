@@ -43,5 +43,8 @@
   },
   "1.3.0": {
     "en": "Added additional history widget settings: Smoothing (yes, no) and time window to display (6h, 12h, 24h)"
+  },
+  "1.3.1": {
+    "en": "Fixed stats display in history widget to show correct stats for selected time span"
   }
 }
