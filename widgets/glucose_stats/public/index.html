@@ -32,25 +32,31 @@
 
     .current {
       display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex-shrink: 0;
+      min-width: 140px;
+    }
+
+    .value-row {
+      display: flex;
       align-items: baseline;
       gap: 6px;
-      flex-shrink: 0;
-      min-width: 160px;
     }
 
     .value {
-      font-size: 26px;
+      font-size: 22px;
       font-weight: 700;
       line-height: 1;
     }
 
     .unit {
-      font-size: 13px;
+      font-size: 12px;
       opacity: .7;
     }
 
     .trend {
-      font-size: 24px;
+      font-size: 22px;
       line-height: 1;
     }
 
@@ -169,21 +175,23 @@
 
         content.innerHTML = `
           <div class="current">
-            <span class="value">
-              ${formatValue(current[unitSettings.valueKey], unitSettings.decimals)}
-            </span>
+            <div class="value-row">
+              <span class="value">
+                ${formatValue(current[unitSettings.valueKey], unitSettings.decimals)}
+              </span>
 
-            <span class="unit">
-              ${unitSettings.label}
-            </span>
+              <span class="unit">
+                ${unitSettings.label}
+              </span>
 
-            <span class="trend">
-              ${trendMap[current.trend] || '–'}
-            </span>
+              <span class="trend">
+                ${trendMap[current.trend] || '–'}
+              </span>
+            </div>
 
-            <span class="freshness ${freshnessClass}">
+            <div class="freshness ${freshnessClass}">
               ${freshnessText}
-            </span>
+            </div>
           </div>
 
           <div class="stats-group">

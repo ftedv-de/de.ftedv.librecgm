@@ -6,10 +6,12 @@
     html, body { width: 100%; height: 100%; margin: 0; font-family: system-ui, sans-serif; color: var(--homey-text-color, #fff); }
     body { padding: 10px; box-sizing: border-box; }
     #content { height: 100%; display: flex; flex-direction: column; gap: 10px; }
-    .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-    .metric { padding: 10px; border-radius: 10px; background: rgba(128, 128, 128, .12); min-width: 0; }
-    .label { font-size: 10px; opacity: .6; text-transform: uppercase; }
-    .value { margin-top: 3px; font-size: 20px; font-weight: 700; white-space: nowrap; }
+    .summary-row { display: flex; align-items: center; }
+    .stats-group { flex: 1; display: flex; align-items: center; gap: 8px; margin-right: 14px; }
+    .stat { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+    .label { font-size: 10px; opacity: .6; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .stat-value { font-size: 18px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .secondary-value { font-size: 11px; opacity: .65; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .unit { font-size: 11px; font-weight: 400; opacity: .7; }
     .range { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
     .range-item { height: 6px; border-radius: 4px; background: rgba(128, 128, 128, .2); overflow: hidden; position: relative; }
@@ -39,14 +41,13 @@
         const glucoseUnit = settings.glucose_unit || 'mgdl';
         const gmiUnit = settings.gmi_unit || 'both';
         const average = glucoseUnit === 'mmol' ? data.averageMmol : data.averageMgDl;
-        const averageLabel = glucoseUnit === 'mmol' ? 'mmol/L' : 'mg/dL';
         const averageDecimals = glucoseUnit === 'mmol' ? 1 : 0;
         const tir = data.timeInRange || {};
         const gmiValue = gmiUnit === 'ifcc'
           ? `${format(data.gmiMmolMol)} <span class="unit">mmol/mol</span>`
           : `${format(data.gmiPercent, 1)} <span class="unit">%</span>`;
-        const ifccMetric = gmiUnit === 'both'
-          ? `<div class="metric"><div class="label">${translate('ifcc', 'IFCC')}</div><div class="value">${format(data.gmiMmolMol)} <span class="unit">mmol/mol</span></div></div>`
+        const secondaryGmi = gmiUnit === 'both'
+          ? `${translate('ifcc', 'IFCC')} ${format(data.gmiMmolMol)} mmol/mol`
           : '';
         const message = data.observedDays < 10
           ? translate('collecting', 'Collecting CGM data: __days__ of at least 10 days').replace('__days__', format(data.observedDays, 1))
@@ -56,13 +57,18 @@
 
         content.className = '';
         content.innerHTML = `
-          <div class="metrics">
-            <div class="metric"><div class="label">${translate('gmi', 'GMI')}</div><div class="value">${gmiValue}</div></div>
-            ${ifccMetric}
-            <div class="metric"><div class="label">${translate('average', 'Avg')}</div><div class="value">${format(average, averageDecimals)} <span class="unit">${averageLabel}</span></div></div>
-            <div class="metric"><div class="label">${translate('time_in_range', 'In range')}</div><div class="value">${format(tir.inRangePercent)} <span class="unit">%</span></div></div>
-            <div class="metric"><div class="label">${translate('coverage', 'Coverage')}</div><div class="value">${format(data.coveragePercent)} <span class="unit">%</span></div></div>
-            <div class="metric"><div class="label">${translate('period', 'Period')}</div><div class="value">${data.rangeDays} <span class="unit">${translate('days', 'days')}</span></div></div>
+          <div class="summary-row">
+            <div class="stats-group">
+              <div class="stat">
+                <div class="label">${translate('gmi', 'GMI')}</div>
+                <div class="stat-value">${gmiValue}</div>
+                ${secondaryGmi ? `<div class="secondary-value">${secondaryGmi}</div>` : ''}
+              </div>
+              <div class="stat"><div class="label">${translate('average', 'Avg')}</div><div class="stat-value">${format(average, averageDecimals)}</div></div>
+              <div class="stat"><div class="label">${translate('time_in_range', 'In range')}</div><div class="stat-value">${format(tir.inRangePercent)} <span class="unit">%</span></div></div>
+              <div class="stat"><div class="label">${translate('coverage', 'Coverage')}</div><div class="stat-value">${format(data.coveragePercent)} <span class="unit">%</span></div></div>
+              <div class="stat"><div class="label">${translate('period', 'Period')}</div><div class="stat-value">${data.rangeDays} <span class="unit">${translate('days', 'days')}</span></div></div>
+            </div>
           </div>
           ${message ? `<div class="message">${message}</div>` : ''}
           <div class="range">
@@ -91,7 +97,7 @@
         } catch (err) {
           if (generation !== refreshGeneration) return;
           const content = document.getElementById('content');
-          if (!content.querySelector('.metrics')) {
+          if (!content.querySelector('.summary-row')) {
             content.className = 'empty';
             content.textContent = translate('connection_error', 'Connection error');
           }
