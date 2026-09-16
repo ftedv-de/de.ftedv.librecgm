@@ -49,5 +49,8 @@
   },
   "2.0.0": {
     "en": "Added centralized LibreLinkUp account management with automatic migration, improved polling reliability, configurable glucose target ranges, Time in Range statistics, rapid rise/fall Flow triggers, enhanced history charts, stale-data indicators, and a new multi-person overview widget."
+  },
+  "2.1.0": {
+    "en": "Style updates to widgets"
   }
 }
