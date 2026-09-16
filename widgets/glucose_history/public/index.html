@@ -39,10 +39,17 @@
 
     .current {
       display: flex;
-      align-items: baseline;
-      gap: 6px;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
       flex-shrink: 0;
       min-width: 160px;
+    }
+
+    .current-value-row {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
     }
 
     .value {
@@ -78,6 +85,7 @@
       display: flex;
       justify-content: space-around;
       gap: 18px;
+      transform: translateX(-18px);
     }
 
     .stat {
@@ -306,24 +314,26 @@
           ? targetRange.highMmol
           : targetRange.highMgDl;
         const values = visiblePoints.map(point => point.chartValue);
-
-        if (Number.isFinite(targetLow)) values.push(targetLow);
-        if (Number.isFinite(targetHigh)) values.push(targetHigh);
-
-        const min =
-          Math.min(...values);
-
-        const max =
-          Math.max(...values);
-
-        const range =
-          Math.max(0.1, max - min);
+        const dataMin = Math.min(...values);
+        const dataMax = Math.max(...values);
+        const minimumRange = unitSettings.unit === 'mmol' ? 0.6 : 10;
+        const visibleRange = Math.max(minimumRange, dataMax - dataMin);
+        const center = (dataMin + dataMax) / 2;
+        const min = center - visibleRange * 0.58;
+        const max = center + visibleRange * 0.58;
+        const range = max - min;
 
         if (Number.isFinite(targetLow) && Number.isFinite(targetHigh)) {
-          const top = paddingTop + chartHeight - ((targetHigh - min) / range) * chartHeight;
-          const bottom = paddingTop + chartHeight - ((targetLow - min) / range) * chartHeight;
+          const visibleTargetLow = Math.max(min, targetLow);
+          const visibleTargetHigh = Math.min(max, targetHigh);
+          const top = paddingTop + chartHeight
+            - ((visibleTargetHigh - min) / range) * chartHeight;
+          const bottom = paddingTop + chartHeight
+            - ((visibleTargetLow - min) / range) * chartHeight;
           ctx.fillStyle = 'rgba(76, 175, 80, 0.12)';
-          ctx.fillRect(paddingLeft, top, chartWidth, bottom - top);
+          if (visibleTargetLow < visibleTargetHigh) {
+            ctx.fillRect(paddingLeft, top, chartWidth, bottom - top);
+          }
         }
 
         ctx.strokeStyle =
@@ -376,7 +386,7 @@
         ctx.textBaseline =
           'top';
 
-        const xDivisions = rangeHours === 6 ? 6 : 2;
+        const xDivisions = 6;
         const xLabels = Array.from({ length: xDivisions + 1 }, (_, index) => {
           const hoursAgo = rangeHours - ((rangeHours / xDivisions) * index);
           return `${Math.round(hoursAgo)}h`;
@@ -548,17 +558,19 @@
         content.innerHTML = `
           <div class="current-row">
             <div class="current">
-              <span class="value">
-                ${formatValue(current[unitSettings.valueKey], unitSettings.decimals)}
-              </span>
+              <div class="current-value-row">
+                <span class="value">
+                  ${formatValue(current[unitSettings.valueKey], unitSettings.decimals)}
+                </span>
 
-              <span class="unit">
-                ${unitSettings.label}
-              </span>
+                <span class="unit">
+                  ${unitSettings.label}
+                </span>
 
-              <span class="trend">
-                ${trendMap[current.trend] || '–'}
-              </span>
+                <span class="trend">
+                  ${trendMap[current.trend] || '–'}
+                </span>
+              </div>
 
               <span class="freshness ${freshnessClass}">
                 ${freshnessText}
