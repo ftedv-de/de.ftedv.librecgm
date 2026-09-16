@@ -1,0 +1,110 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    html, body { width: 100%; height: 100%; margin: 0; font-family: system-ui, sans-serif; color: var(--homey-text-color, #fff); }
+    body { padding: 10px; box-sizing: border-box; }
+    #content { height: 100%; display: flex; flex-direction: column; gap: 10px; }
+    .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .metric { padding: 10px; border-radius: 10px; background: rgba(128, 128, 128, .12); min-width: 0; }
+    .label { font-size: 10px; opacity: .6; text-transform: uppercase; }
+    .value { margin-top: 3px; font-size: 20px; font-weight: 700; white-space: nowrap; }
+    .unit { font-size: 11px; font-weight: 400; opacity: .7; }
+    .range { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .range-item { height: 6px; border-radius: 4px; background: rgba(128, 128, 128, .2); overflow: hidden; position: relative; }
+    .range-fill { height: 100%; }
+    .low { background: #e53935; }
+    .in-range { background: #43a047; }
+    .high { background: #fb8c00; }
+    .range-labels { display: grid; grid-template-columns: repeat(3, 1fr); font-size: 10px; opacity: .75; text-align: center; }
+    .message { font-size: 12px; text-align: center; padding: 8px; border-radius: 8px; background: rgba(128, 128, 128, .1); }
+    .disclaimer { margin-top: auto; font-size: 9px; opacity: .55; line-height: 1.3; }
+    .empty { justify-content: center; align-items: center; opacity: .7; }
+  </style>
+</head>
+<body>
+  <div id="content" class="empty">...</div>
+  <script type="text/javascript">
+    function onHomeyReady(Homey) {
+      const translate = (key, fallback) => Homey.__(`widgets.${key}`) || fallback;
+      let refreshGeneration = 0;
+      const format = (value, decimals = 0) => Number.isFinite(value)
+        ? Number(value).toFixed(decimals)
+        : '–';
+
+      function render(data) {
+        const content = document.getElementById('content');
+        const settings = Homey.getSettings();
+        const glucoseUnit = settings.glucose_unit || 'mgdl';
+        const gmiUnit = settings.gmi_unit || 'both';
+        const average = glucoseUnit === 'mmol' ? data.averageMmol : data.averageMgDl;
+        const averageLabel = glucoseUnit === 'mmol' ? 'mmol/L' : 'mg/dL';
+        const averageDecimals = glucoseUnit === 'mmol' ? 1 : 0;
+        const tir = data.timeInRange || {};
+        const gmiValue = gmiUnit === 'ifcc'
+          ? `${format(data.gmiMmolMol)} <span class="unit">mmol/mol</span>`
+          : `${format(data.gmiPercent, 1)} <span class="unit">%</span>`;
+        const ifccMetric = gmiUnit === 'both'
+          ? `<div class="metric"><div class="label">${translate('ifcc', 'IFCC')}</div><div class="value">${format(data.gmiMmolMol)} <span class="unit">mmol/mol</span></div></div>`
+          : '';
+        const message = data.observedDays < 10
+          ? translate('collecting', 'Collecting CGM data: __days__ of at least 10 days').replace('__days__', format(data.observedDays, 1))
+          : data.coveragePercent < 70
+            ? translate('insufficient_coverage', 'At least 70% data coverage is required.')
+            : '';
+
+        content.className = '';
+        content.innerHTML = `
+          <div class="metrics">
+            <div class="metric"><div class="label">${translate('gmi', 'GMI')}</div><div class="value">${gmiValue}</div></div>
+            ${ifccMetric}
+            <div class="metric"><div class="label">${translate('average', 'Avg')}</div><div class="value">${format(average, averageDecimals)} <span class="unit">${averageLabel}</span></div></div>
+            <div class="metric"><div class="label">${translate('time_in_range', 'In range')}</div><div class="value">${format(tir.inRangePercent)} <span class="unit">%</span></div></div>
+            <div class="metric"><div class="label">${translate('coverage', 'Coverage')}</div><div class="value">${format(data.coveragePercent)} <span class="unit">%</span></div></div>
+            <div class="metric"><div class="label">${translate('period', 'Period')}</div><div class="value">${data.rangeDays} <span class="unit">${translate('days', 'days')}</span></div></div>
+          </div>
+          ${message ? `<div class="message">${message}</div>` : ''}
+          <div class="range">
+            <div class="range-item"><div class="range-fill low" style="width:${tir.lowPercent || 0}%"></div></div>
+            <div class="range-item"><div class="range-fill in-range" style="width:${tir.inRangePercent || 0}%"></div></div>
+            <div class="range-item"><div class="range-fill high" style="width:${tir.highPercent || 0}%"></div></div>
+          </div>
+          <div class="range-labels">
+            <span>${translate('low', 'Low')} ${format(tir.lowPercent)}%</span>
+            <span>${translate('time_in_range', 'In range')} ${format(tir.inRangePercent)}%</span>
+            <span>${translate('high', 'High')} ${format(tir.highPercent)}%</span>
+          </div>
+          <div class="disclaimer">${translate('gmi_disclaimer', 'GMI is an estimate based on CGM data and may differ from laboratory HbA1c.')}</div>
+        `;
+      }
+
+      async function refresh() {
+        const generation = ++refreshGeneration;
+        try {
+          const deviceIds = await Homey.getDeviceIds();
+          const deviceId = Array.isArray(deviceIds) ? deviceIds[0] : deviceIds;
+          const rangeDays = Number(Homey.getSettings().range_days || 14);
+          const data = await Homey.api('GET', `/getGlucoseSummary?deviceId=${encodeURIComponent(deviceId || '')}&rangeDays=${rangeDays}`);
+          if (generation !== refreshGeneration) return;
+          render(data);
+        } catch (err) {
+          if (generation !== refreshGeneration) return;
+          const content = document.getElementById('content');
+          if (!content.querySelector('.metrics')) {
+            content.className = 'empty';
+            content.textContent = translate('connection_error', 'Connection error');
+          }
+        }
+      }
+
+      Homey.ready();
+      document.getElementById('content').textContent = translate('loading', 'Loading glucose values...');
+      refresh();
+      Homey.on('settings', refresh);
+      setInterval(refresh, 60 * 1000);
+    }
+  </script>
+  <script src="/homey.js" data-origin="widget"></script>
+</body>
+</html>

@@ -26,7 +26,7 @@ module.exports = class LibreViewDevice extends Homey.Device {
       patientId,
       {
         sensorLifetimeDays,
-        onReading: (reading) => this.applyReading(reading),
+        onReading: (reading) => this.enqueueReading(reading),
         onError: (err) => this.applyConnectionError(err),
       },
     );
@@ -66,6 +66,13 @@ module.exports = class LibreViewDevice extends Homey.Device {
     const message = err?.message || String(err);
     await this.setStoreValue('connectionError', message);
     await this.setUnavailable(message);
+  }
+
+  enqueueReading(reading) {
+    this.readingQueue = (this.readingQueue ?? Promise.resolve())
+      .catch(() => undefined)
+      .then(() => this.applyReading(reading));
+    return this.readingQueue;
   }
 
   async applyReading(reading) {
@@ -111,10 +118,19 @@ module.exports = class LibreViewDevice extends Homey.Device {
       trendArrow: reading.trendArrow,
     };
 
-    await this.mergeGlucoseHistory([
+    const historyEntries = [
       ...(Array.isArray(reading.history) ? reading.history : []),
       lastReading,
-    ]);
+    ];
+    const storedHistory = Array.isArray(this.getStoreValue('glucoseHistory24h'))
+      ? this.getStoreValue('glucoseHistory24h')
+      : [];
+
+    await this.updateLongTermAggregates(
+      [...storedHistory, ...historyEntries],
+      targetRange,
+    );
+    await this.mergeGlucoseHistory(historyEntries);
     await this.setStoreValue('lastSuccessfulPoll', new Date().toISOString());
     await this.setStoreValue('connectionError', null);
     await this.setStoreValue('targetRange', targetRange);
@@ -196,6 +212,185 @@ module.exports = class LibreViewDevice extends Homey.Device {
     const result = [...merged.values()].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
     await this.setStoreValue('glucoseHistory24h', result);
+  }
+
+  async updateLongTermAggregates(entries, targetRange) {
+    const maxIntervalMs = 15 * 60 * 1000;
+    const now = Date.now();
+    const recentCutoff = now - 72 * 60 * 60 * 1000;
+    const aggregateCutoff = now - 91 * 24 * 60 * 60 * 1000;
+    const targetSignature = `${targetRange.lowMgDl}:${targetRange.highMgDl}`;
+    const storedState = this.getStoreValue('glucoseLongTermState');
+    const targetChanged = storedState?.targetSignature
+      && storedState.targetSignature !== targetSignature;
+    const state = storedState ?? { aggregates: [], recentPoints: [] };
+    if (targetChanged) {
+      state.aggregates = state.aggregates.map((item) => ({
+        ...item,
+        lowMs: 0,
+        inRangeMs: 0,
+        highMs: 0,
+        tirCoveredMs: 0,
+      }));
+    }
+    const points = [...state.recentPoints, ...entries]
+      .map((item) => ({
+        timestamp: item?.timestamp,
+        time: new Date(item?.timestamp).getTime(),
+        valueMgDl: Number(item?.valueMgDl),
+      }))
+      .filter((item) => Number.isFinite(item.time)
+        && Number.isFinite(item.valueMgDl)
+        && item.time >= recentCutoff
+        && item.time <= now + 5 * 60 * 1000)
+      .sort((a, b) => a.time - b.time);
+    const uniquePoints = [...new Map(points.map((item) => [item.time, item])).values()];
+    const currentDate = new Date(now);
+    const todayStart = Date.UTC(
+      currentDate.getUTCFullYear(),
+      currentDate.getUTCMonth(),
+      currentDate.getUTCDate(),
+    );
+    const rebuildDates = new Set([
+      new Date(todayStart).toISOString().slice(0, 10),
+      new Date(todayStart - 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+      new Date(todayStart - 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+    ]);
+    const aggregates = new Map(
+      state.aggregates
+        .filter((item) => !rebuildDates.has(item.date))
+        .map((item) => [item.date, item]),
+    );
+
+    for (let index = 0; index < uniquePoints.length - 1; index += 1) {
+      const point = uniquePoints[index];
+      const next = uniquePoints[index + 1];
+      const effectiveEnd = Math.min(next.time, now);
+
+      if (effectiveEnd - point.time <= 0 || effectiveEnd - point.time > maxIntervalMs) continue;
+
+      let intervalStart = point.time;
+      while (intervalStart < effectiveEnd) {
+        const date = new Date(intervalStart);
+        const dayEnd = Date.UTC(
+          date.getUTCFullYear(),
+          date.getUTCMonth(),
+          date.getUTCDate() + 1,
+        );
+        const intervalEnd = Math.min(effectiveEnd, dayEnd);
+        const duration = intervalEnd - intervalStart;
+        const dateKey = date.toISOString().slice(0, 10);
+        if (!rebuildDates.has(dateKey)) {
+          intervalStart = intervalEnd;
+          continue;
+        }
+        const aggregate = aggregates.get(dateKey) ?? {
+          date: dateKey,
+          weightedMgDlMs: 0,
+          coveredMs: 0,
+          lowMs: 0,
+          inRangeMs: 0,
+          highMs: 0,
+          tirCoveredMs: 0,
+          firstTimestamp: intervalStart,
+          lastTimestamp: intervalEnd,
+        };
+
+        aggregate.weightedMgDlMs += point.valueMgDl * duration;
+        aggregate.coveredMs += duration;
+        aggregate.tirCoveredMs += duration;
+        aggregate.firstTimestamp = Math.min(aggregate.firstTimestamp, intervalStart);
+        aggregate.lastTimestamp = Math.max(aggregate.lastTimestamp, intervalEnd);
+
+        if (point.valueMgDl < targetRange.lowMgDl) aggregate.lowMs += duration;
+        else if (point.valueMgDl > targetRange.highMgDl) aggregate.highMs += duration;
+        else aggregate.inRangeMs += duration;
+
+        aggregates.set(dateKey, aggregate);
+        intervalStart = intervalEnd;
+      }
+    }
+
+    const result = [...aggregates.values()]
+      .filter((item) => item.lastTimestamp >= aggregateCutoff)
+      .sort((a, b) => a.date.localeCompare(b.date));
+    await this.setStoreValue('glucoseLongTermState', {
+      targetSignature,
+      aggregates: result,
+      recentPoints: uniquePoints.map((item) => ({
+        timestamp: item.timestamp,
+        valueMgDl: item.valueMgDl,
+      })),
+    });
+  }
+
+  getLongTermSummary(rangeDays = 14) {
+    const days = [14, 30, 90].includes(Number(rangeDays)) ? Number(rangeDays) : 14;
+    const now = Date.now();
+    const periodMs = days * 24 * 60 * 60 * 1000;
+    const periodStart = now - periodMs;
+    const state = this.getStoreValue('glucoseLongTermState');
+    const aggregates = Array.isArray(state?.aggregates)
+      ? state.aggregates.filter((item) => item.lastTimestamp >= periodStart)
+      : [];
+    const totals = aggregates.reduce((result, item) => {
+      const storedDuration = Math.max(0, item.lastTimestamp - item.firstTimestamp);
+      const overlapStart = Math.max(periodStart, item.firstTimestamp);
+      const overlapDuration = Math.max(0, item.lastTimestamp - overlapStart);
+      const factor = storedDuration ? Math.min(1, overlapDuration / storedDuration) : 0;
+
+      return {
+        weightedMgDlMs: result.weightedMgDlMs + Number(item.weightedMgDlMs || 0) * factor,
+        coveredMs: result.coveredMs + Number(item.coveredMs || 0) * factor,
+        lowMs: result.lowMs + Number(item.lowMs || 0) * factor,
+        inRangeMs: result.inRangeMs + Number(item.inRangeMs || 0) * factor,
+        highMs: result.highMs + Number(item.highMs || 0) * factor,
+        tirCoveredMs: result.tirCoveredMs + Number(item.tirCoveredMs || 0) * factor,
+      };
+    }, {
+      weightedMgDlMs: 0,
+      coveredMs: 0,
+      lowMs: 0,
+      inRangeMs: 0,
+      highMs: 0,
+      tirCoveredMs: 0,
+    });
+    const rawCoverage = totals.coveredMs / periodMs;
+    const rawTirCoverage = totals.tirCoveredMs / periodMs;
+    const rawObservedDays = totals.coveredMs / (24 * 60 * 60 * 1000);
+    const coveragePercent = Math.min(100, Math.round(rawCoverage * 100));
+    const observedDays = Math.round(rawObservedDays * 10) / 10;
+    const averageMgDl = totals.coveredMs
+      ? totals.weightedMgDlMs / totals.coveredMs
+      : null;
+    const averageMmol = averageMgDl === null ? null : averageMgDl / 18.0182;
+    const sufficientData = rawObservedDays >= 10 && rawCoverage >= 0.7;
+    const percentage = (value) => (totals.tirCoveredMs
+      ? Math.round((value / totals.tirCoveredMs) * 100)
+      : null);
+    const gmiPercent = sufficientData
+      ? Math.round((3.31 + 0.02392 * averageMgDl) * 10) / 10
+      : null;
+    const gmiMmolMol = sufficientData
+      ? Math.round(12.71 + 4.70587 * averageMmol)
+      : null;
+
+    return {
+      rangeDays: days,
+      observedDays,
+      coveragePercent,
+      sufficientData,
+      averageMgDl: averageMgDl === null ? null : Math.round(averageMgDl),
+      averageMmol: averageMmol === null ? null : Math.round(averageMmol * 10) / 10,
+      gmiPercent,
+      gmiMmolMol,
+      timeInRange: {
+        coveragePercent: Math.min(100, Math.round(rawTirCoverage * 100)),
+        lowPercent: rawTirCoverage >= 0.7 ? percentage(totals.lowMs) : null,
+        inRangePercent: rawTirCoverage >= 0.7 ? percentage(totals.inRangeMs) : null,
+        highPercent: rawTirCoverage >= 0.7 ? percentage(totals.highMs) : null,
+      },
+    };
   }
 
   getEffectiveTargetRange(reading = null) {

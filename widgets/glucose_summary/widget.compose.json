@@ -1,0 +1,58 @@
+{
+  "name": {
+    "en": "Glucose summary",
+    "de": "Glukoseübersicht mit GMI"
+  },
+  "description": {
+    "en": "Shows GMI, average glucose, time in range and data coverage.",
+    "de": "Zeigt GMI, Durchschnittsglukose, Zeit im Zielbereich und Datenabdeckung."
+  },
+  "height": "32",
+  "devices": {
+    "type": "global",
+    "singular": true,
+    "filter": {
+      "capabilities": "measure_glucose_mgdl"
+    }
+  },
+  "api": {
+    "getGlucoseSummary": {
+      "method": "GET",
+      "path": "/getGlucoseSummary"
+    }
+  },
+  "settings": [
+    {
+      "id": "range_days",
+      "type": "dropdown",
+      "title": { "en": "Period", "de": "Zeitraum" },
+      "value": "14",
+      "values": [
+        { "id": "14", "label": { "en": "14 days", "de": "14 Tage" } },
+        { "id": "30", "label": { "en": "30 days", "de": "30 Tage" } },
+        { "id": "90", "label": { "en": "90 days", "de": "90 Tage" } }
+      ]
+    },
+    {
+      "id": "glucose_unit",
+      "type": "dropdown",
+      "title": { "en": "Glucose unit", "de": "Glukoseeinheit" },
+      "value": "mgdl",
+      "values": [
+        { "id": "mgdl", "label": { "en": "mg/dL", "de": "mg/dL" } },
+        { "id": "mmol", "label": { "en": "mmol/L", "de": "mmol/L" } }
+      ]
+    },
+    {
+      "id": "gmi_unit",
+      "type": "dropdown",
+      "title": { "en": "GMI unit", "de": "GMI-Einheit" },
+      "value": "both",
+      "values": [
+        { "id": "percent", "label": { "en": "%", "de": "%" } },
+        { "id": "ifcc", "label": { "en": "mmol/mol", "de": "mmol/mol" } },
+        { "id": "both", "label": { "en": "Both", "de": "Beide" } }
+      ]
+    }
+  ]
+}

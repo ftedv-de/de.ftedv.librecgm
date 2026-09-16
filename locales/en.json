@@ -17,6 +17,14 @@
     "time_in_range": "In range",
     "low": "Low",
     "high": "High",
-    "no_people": "No people selected."
+    "no_people": "No people selected.",
+    "gmi": "GMI",
+    "ifcc": "IFCC",
+    "coverage": "Coverage",
+    "period": "Period",
+    "days": "days",
+    "collecting": "Collecting CGM data: __days__ of at least 10 days",
+    "insufficient_coverage": "At least 70% data coverage is required.",
+    "gmi_disclaimer": "GMI is an estimate based on CGM data and may differ from laboratory HbA1c."
   }
 }
