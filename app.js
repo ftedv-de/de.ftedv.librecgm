@@ -36,10 +36,8 @@ module.exports = class LibreCGM extends Homey.App {
       return devices[0] ?? null;
     }
 
-    return devices.find(device =>
-      device.getId?.() === deviceId ||
-      device.getData()?.id === deviceId
-    ) ?? null;
+    return devices.find((device) => device.getId?.() === deviceId
+      || device.getData()?.id === deviceId) ?? null;
   }
 
   async getGlucoseDashboardData(deviceId) {
@@ -50,6 +48,20 @@ module.exports = class LibreCGM extends Homey.App {
     }
 
     return device.getDashboardData();
+  }
+
+  async getGlucosePeopleData(deviceIds = []) {
+    const driver = this.homey.drivers.getDriver('glucose_person');
+    const selectedIds = new Set(Array.isArray(deviceIds) ? deviceIds : []);
+    const devices = driver.getDevices().filter((device) => selectedIds.has(device.getId?.())
+      || selectedIds.has(device.getData()?.id));
+
+    return {
+      people: devices.map((device) => ({
+        deviceId: device.getId?.() ?? device.getData()?.id,
+        ...device.getDashboardData(),
+      })),
+    };
   }
 
 };

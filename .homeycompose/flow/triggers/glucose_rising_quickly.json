@@ -1,0 +1,28 @@
+{
+  "title": {
+    "en": "Glucose started rising quickly",
+    "de": "Glukose steigt jetzt schnell"
+  },
+  "tokens": [
+    {
+      "name": "glucose_mgdl",
+      "type": "number",
+      "title": { "en": "Glucose mg/dL", "de": "Glukose mg/dL" }
+    },
+    {
+      "name": "glucose_mmol",
+      "type": "number",
+      "title": { "en": "Glucose mmol/L", "de": "Glukose mmol/L" }
+    },
+    {
+      "name": "delta_mgdl",
+      "type": "number",
+      "title": { "en": "Change mg/dL", "de": "Änderung mg/dL" }
+    },
+    {
+      "name": "delta_mmol",
+      "type": "number",
+      "title": { "en": "Change mmol/L", "de": "Änderung mmol/L" }
+    }
+  ]
+}

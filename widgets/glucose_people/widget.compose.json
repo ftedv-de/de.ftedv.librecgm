@@ -1,0 +1,36 @@
+{
+  "name": {
+    "en": "Glucose overview",
+    "de": "Glukoseübersicht"
+  },
+  "description": {
+    "en": "Shows current glucose values for multiple people.",
+    "de": "Zeigt aktuelle Glukosewerte mehrerer Personen."
+  },
+  "height": "32",
+  "devices": {
+    "type": "global",
+    "singular": false,
+    "filter": {
+      "capabilities": "measure_glucose_mgdl"
+    }
+  },
+  "api": {
+    "getPeople": {
+      "method": "GET",
+      "path": "/getPeople"
+    }
+  },
+  "settings": [
+    {
+      "id": "glucose_unit",
+      "type": "dropdown",
+      "title": { "en": "Glucose unit", "de": "Glukoseeinheit" },
+      "value": "mgdl",
+      "values": [
+        { "id": "mgdl", "label": { "en": "mg/dL", "de": "mg/dL" } },
+        { "id": "mmol", "label": { "en": "mmol/L", "de": "mmol/L" } }
+      ]
+    }
+  ]
+}

@@ -2,7 +2,7 @@
   "_comment": "This file is generated. Please edit .homeycompose/app.json instead.",
   "id": "de.ftedv.librecgm",
   "version": "1.3.1",
-  "compatibility": ">=12.4.0",
+  "compatibility": ">=12.9.0",
   "sdk": 3,
   "runtime": "nodejs",
   "platforms": [
@@ -55,6 +55,47 @@
     "triggers": [
       {
         "title": {
+          "en": "Glucose started falling quickly",
+          "de": "Glukose fällt jetzt schnell"
+        },
+        "tokens": [
+          {
+            "name": "glucose_mgdl",
+            "type": "number",
+            "title": {
+              "en": "Glucose mg/dL",
+              "de": "Glukose mg/dL"
+            }
+          },
+          {
+            "name": "glucose_mmol",
+            "type": "number",
+            "title": {
+              "en": "Glucose mmol/L",
+              "de": "Glukose mmol/L"
+            }
+          },
+          {
+            "name": "delta_mgdl",
+            "type": "number",
+            "title": {
+              "en": "Change mg/dL",
+              "de": "Änderung mg/dL"
+            }
+          },
+          {
+            "name": "delta_mmol",
+            "type": "number",
+            "title": {
+              "en": "Change mmol/L",
+              "de": "Änderung mmol/L"
+            }
+          }
+        ],
+        "id": "glucose_falling_quickly"
+      },
+      {
+        "title": {
           "en": "Glucose became high",
           "de": "Glukose wurde hoch"
         },
@@ -102,6 +143,47 @@
           }
         ],
         "id": "glucose_low"
+      },
+      {
+        "title": {
+          "en": "Glucose started rising quickly",
+          "de": "Glukose steigt jetzt schnell"
+        },
+        "tokens": [
+          {
+            "name": "glucose_mgdl",
+            "type": "number",
+            "title": {
+              "en": "Glucose mg/dL",
+              "de": "Glukose mg/dL"
+            }
+          },
+          {
+            "name": "glucose_mmol",
+            "type": "number",
+            "title": {
+              "en": "Glucose mmol/L",
+              "de": "Glukose mmol/L"
+            }
+          },
+          {
+            "name": "delta_mgdl",
+            "type": "number",
+            "title": {
+              "en": "Change mg/dL",
+              "de": "Änderung mg/dL"
+            }
+          },
+          {
+            "name": "delta_mmol",
+            "type": "number",
+            "title": {
+              "en": "Change mmol/L",
+              "de": "Änderung mmol/L"
+            }
+          }
+        ],
+        "id": "glucose_rising_quickly"
       },
       {
         "title": {
@@ -233,6 +315,53 @@
           ]
         },
         {
+          "id": "target_range_source",
+          "type": "dropdown",
+          "label": {
+            "en": "Target range",
+            "de": "Zielbereich"
+          },
+          "value": "account",
+          "values": [
+            {
+              "id": "account",
+              "label": {
+                "en": "Use LibreView target range",
+                "de": "LibreView-Zielbereich verwenden"
+              }
+            },
+            {
+              "id": "custom",
+              "label": {
+                "en": "Use custom target range",
+                "de": "Eigenen Zielbereich verwenden"
+              }
+            }
+          ]
+        },
+        {
+          "id": "target_low_mgdl",
+          "type": "number",
+          "label": {
+            "en": "Custom low limit (mg/dL)",
+            "de": "Eigene Untergrenze (mg/dL)"
+          },
+          "value": 70,
+          "min": 40,
+          "max": 499
+        },
+        {
+          "id": "target_high_mgdl",
+          "type": "number",
+          "label": {
+            "en": "Custom high limit (mg/dL)",
+            "de": "Eigene Obergrenze (mg/dL)"
+          },
+          "value": 180,
+          "min": 41,
+          "max": 500
+        },
+        {
           "id": "sensor_lifetime_days",
           "type": "number",
           "label": {
@@ -272,8 +401,8 @@
         "de": "Glukoseverlauf"
       },
       "description": {
-        "en": "Shows the glucose history of the last 24 hours.",
-        "de": "Zeigt den Glukoseverlauf der letzten 24 Stunden."
+        "en": "Shows glucose history, target range and time in range.",
+        "de": "Zeigt Glukoseverlauf, Zielbereich und Zeit im Zielbereich."
       },
       "height": "64",
       "devices": {
@@ -358,6 +487,58 @@
         }
       ],
       "id": "glucose_history"
+    },
+    "glucose_people": {
+      "name": {
+        "en": "Glucose overview",
+        "de": "Glukoseübersicht"
+      },
+      "description": {
+        "en": "Shows current glucose values for multiple people.",
+        "de": "Zeigt aktuelle Glukosewerte mehrerer Personen."
+      },
+      "height": "32",
+      "devices": {
+        "type": "global",
+        "singular": false,
+        "filter": {
+          "capabilities": "measure_glucose_mgdl"
+        }
+      },
+      "api": {
+        "getPeople": {
+          "method": "GET",
+          "path": "/getPeople"
+        }
+      },
+      "settings": [
+        {
+          "id": "glucose_unit",
+          "type": "dropdown",
+          "title": {
+            "en": "Glucose unit",
+            "de": "Glukoseeinheit"
+          },
+          "value": "mgdl",
+          "values": [
+            {
+              "id": "mgdl",
+              "label": {
+                "en": "mg/dL",
+                "de": "mg/dL"
+              }
+            },
+            {
+              "id": "mmol",
+              "label": {
+                "en": "mmol/L",
+                "de": "mmol/L"
+              }
+            }
+          ]
+        }
+      ],
+      "id": "glucose_people"
     },
     "glucose_stats": {
       "name": {

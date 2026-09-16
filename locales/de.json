@@ -5,5 +5,18 @@
       "enable": "Debug-Protokollierung aktivieren",
       "description": "Aktivieren Sie die Debug-Protokollierung, bevor Sie einen Diagnosebericht erzeugen. Deaktivieren Sie sie anschließend wieder, um unnötige Log-Ausgaben zu vermeiden."
     }
+  },
+  "widgets": {
+    "loading": "Glukosewerte werden geladen...",
+    "no_data": "Noch keine Glukosewerte vorhanden.",
+    "connection_error": "Verbindungsfehler",
+    "minutes_ago": "vor __minutes__ min",
+    "min": "Min",
+    "average": "Ø",
+    "max": "Max",
+    "time_in_range": "Im Bereich",
+    "low": "Niedrig",
+    "high": "Hoch",
+    "no_people": "Keine Personen ausgewählt."
   }
 }

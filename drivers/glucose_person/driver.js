@@ -11,7 +11,7 @@ module.exports = class LibreViewDriver extends Homey.Driver {
   }
 
   onPair(session) {
-    session.setHandler('login', async credentials => {
+    session.setHandler('login', async (credentials) => {
       const client = new LibreViewClient(credentials);
 
       await client.login();
@@ -24,7 +24,7 @@ module.exports = class LibreViewDriver extends Homey.Driver {
 
       this.pairSession = {
         accountId: registration.accountId,
-        connections
+        connections,
       };
 
       return true;
@@ -35,19 +35,19 @@ module.exports = class LibreViewDriver extends Homey.Driver {
         throw new Error('Not logged in');
       }
 
-      return this.pairSession.connections.map(connection => ({
+      return this.pairSession.connections.map((connection) => ({
         name: connection.name,
         data: {
           id: connection.id,
-          patientId: connection.patientId || connection.id
+          patientId: connection.patientId || connection.id,
         },
         store: {
           accountId: this.pairSession.accountId,
-          patientName: connection.name
+          patientName: connection.name,
         },
         settings: {
-          glucose_unit: 'account'
-        }
+          glucose_unit: 'account',
+        },
       }));
     });
   }

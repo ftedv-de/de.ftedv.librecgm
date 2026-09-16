@@ -1,0 +1,94 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    html, body { margin: 0; width: 100%; height: 100%; font-family: system-ui, sans-serif; color: var(--homey-text-color, #fff); }
+    body { padding: 10px; box-sizing: border-box; }
+    #content { display: grid; gap: 8px; }
+    .person { display: grid; grid-template-columns: minmax(80px, 1fr) auto auto auto; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; background: rgba(128, 128, 128, .12); }
+    .name { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .reading { font-size: 18px; font-weight: 700; }
+    .trend { font-size: 20px; }
+    .age { font-size: 10px; opacity: .65; min-width: 55px; text-align: right; }
+    .age.stale { color: #f57c00; opacity: 1; }
+    .empty { opacity: .7; text-align: center; padding: 20px; }
+  </style>
+</head>
+<body>
+  <div id="content" class="empty"></div>
+  <script type="text/javascript">
+    function onHomeyReady(Homey) {
+      const trends = { falling_quickly: '↓', falling: '↘', flat: '→', rising: '↗', rising_quickly: '↑', unknown: '–' };
+      const translate = (key, fallback) => Homey.__(`widgets.${key}`) || fallback;
+      const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, character => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;',
+      })[character]);
+
+      function ageText(timestamp) {
+        const time = new Date(timestamp).getTime();
+        if (!Number.isFinite(time)) return { minutes: null, text: '' };
+        const minutes = Math.max(0, Math.floor((Date.now() - time) / 60000));
+        return {
+          minutes,
+          text: translate('minutes_ago', '__minutes__ min ago').replace('__minutes__', minutes),
+        };
+      }
+
+      function render(data) {
+        const content = document.getElementById('content');
+        const people = data.people || [];
+        const unit = Homey.getSettings().glucose_unit || 'mgdl';
+        const key = unit === 'mmol' ? 'valueMmol' : 'valueMgDl';
+        const label = unit === 'mmol' ? 'mmol/L' : 'mg/dL';
+        const decimals = unit === 'mmol' ? 1 : 0;
+
+        if (!people.length) {
+          content.className = 'empty';
+          content.textContent = translate('no_people', 'No people selected.');
+          return;
+        }
+
+        content.className = '';
+        content.innerHTML = people.map(person => {
+          const current = person.current;
+          const age = ageText(current?.timestamp);
+          const value = Number(current?.[key]);
+          const status = person.status?.connectionError
+            ? translate('connection_error', 'Connection error')
+            : age.text;
+          return `<div class="person">
+            <span class="name">${escapeHtml(person.deviceName)}</span>
+            <span class="reading">${Number.isFinite(value) ? value.toFixed(decimals) : '–'} ${label}</span>
+            <span class="trend">${trends[current?.trend] || '–'}</span>
+            <span class="age ${person.status?.connectionError || age.minutes > 15 ? 'stale' : ''}">${escapeHtml(status)}</span>
+          </div>`;
+        }).join('');
+      }
+
+      async function refresh() {
+        try {
+          const deviceIds = await Homey.getDeviceIds();
+          const ids = Array.isArray(deviceIds) ? deviceIds : [deviceIds].filter(Boolean);
+          if (!ids.length) {
+            render({ people: [] });
+            return;
+          }
+          const data = await Homey.api('GET', `/getPeople?deviceIds=${encodeURIComponent(ids.join(','))}`);
+          render(data);
+        } catch (err) {
+          const content = document.getElementById('content');
+          content.className = 'empty';
+          content.textContent = translate('connection_error', 'Connection error');
+        }
+      }
+
+      Homey.ready();
+      refresh();
+      Homey.on('settings', refresh);
+      setInterval(refresh, 60 * 1000);
+    }
+  </script>
+  <script src="/homey.js" data-origin="widget"></script>
+</body>
+</html>

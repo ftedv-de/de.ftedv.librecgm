@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": false,
+    "module": "commonjs",
+    "noEmit": true,
+    "target": "ES2022"
+  },
+  "include": [
+    "**/*.js"
+  ],
+  "exclude": [
+    ".homeybuild",
+    "node_modules"
+  ]
+}

@@ -5,5 +5,18 @@
       "enable": "Enable debug logging",
       "description": "Enable debug logging before generating a diagnostics report. Disable it again afterwards to reduce unnecessary log output."
     }
+  },
+  "widgets": {
+    "loading": "Loading glucose values...",
+    "no_data": "No glucose values available yet.",
+    "connection_error": "Connection error",
+    "minutes_ago": "__minutes__ min ago",
+    "min": "Min",
+    "average": "Avg",
+    "max": "Max",
+    "time_in_range": "In range",
+    "low": "Low",
+    "high": "High",
+    "no_people": "No people selected."
   }
 }

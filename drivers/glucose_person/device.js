@@ -26,9 +26,9 @@ module.exports = class LibreViewDevice extends Homey.Device {
       patientId,
       {
         sensorLifetimeDays,
-        onReading: reading => this.applyReading(reading),
-        onError: err => this.applyConnectionError(err),
-      }
+        onReading: (reading) => this.applyReading(reading),
+        onError: (err) => this.applyConnectionError(err),
+      },
     );
   }
 
@@ -56,7 +56,7 @@ module.exports = class LibreViewDevice extends Homey.Device {
     await this.unsetStoreValue('credentials');
     await this.unsetStoreValue('auth');
     this.homey.app.debug(
-      `Migrated LibreView device ${this.getName()} to account ${registration.accountId}`
+      `Migrated LibreView device ${this.getName()} to account ${registration.accountId}`,
     );
 
     return registration.accountId;
@@ -77,8 +77,9 @@ module.exports = class LibreViewDevice extends Homey.Device {
     const isNewReading = !Number.isFinite(previousTimestamp) || previousTimestamp !== timestamp;
     const previousHigh = this.getCapabilityValue('alarm_glucose_high');
     const previousLow = this.getCapabilityValue('alarm_glucose_low');
-    const isHigh = reading.valueMgDl > reading.targetHighMgDl;
-    const isLow = reading.valueMgDl < reading.targetLowMgDl;
+    const targetRange = this.getEffectiveTargetRange(reading);
+    const isHigh = reading.valueMgDl > targetRange.highMgDl;
+    const isLow = reading.valueMgDl < targetRange.lowMgDl;
 
     await this.setCapabilityValue('measure_glucose_mgdl', reading.valueMgDl);
     await this.setCapabilityValue('measure_glucose_mmol', reading.valueMmol);
@@ -94,10 +95,8 @@ module.exports = class LibreViewDevice extends Homey.Device {
       await this.setCapabilityValue('sensor_expiry_hours', reading.sensorExpiryHours);
     }
 
-    const previousSensorExpiringSoon =
-      this.getStoreValue('sensorExpiringSoon') === true;
-    const sensorExpiringSoon =
-      reading.sensorExpiryHours !== null && reading.sensorExpiryHours <= 24;
+    const previousSensorExpiringSoon = this.getStoreValue('sensorExpiringSoon') === true;
+    const sensorExpiringSoon = reading.sensorExpiryHours !== null && reading.sensorExpiryHours <= 24;
 
     await this.setStoreValue('sensorExpiringSoon', sensorExpiringSoon);
     await this.setCapabilityValue('alarm_sensor_expiry', sensorExpiringSoon);
@@ -118,6 +117,7 @@ module.exports = class LibreViewDevice extends Homey.Device {
     ]);
     await this.setStoreValue('lastSuccessfulPoll', new Date().toISOString());
     await this.setStoreValue('connectionError', null);
+    await this.setStoreValue('targetRange', targetRange);
     await this.setAvailable();
 
     if (!isNewReading) return;
@@ -144,6 +144,27 @@ module.exports = class LibreViewDevice extends Homey.Device {
       });
     }
 
+    const trendTokens = {
+      glucose_mgdl: reading.valueMgDl,
+      glucose_mmol: reading.valueMmol,
+      delta_mgdl: reading.deltaMgDl,
+      delta_mmol: reading.deltaMmol,
+    };
+
+    if (reading.trend === 'rising_quickly'
+      && previousReading?.trend !== 'rising_quickly') {
+      await this.homey.flow
+        .getDeviceTriggerCard('glucose_rising_quickly')
+        .trigger(this, trendTokens);
+    }
+
+    if (reading.trend === 'falling_quickly'
+      && previousReading?.trend !== 'falling_quickly') {
+      await this.homey.flow
+        .getDeviceTriggerCard('glucose_falling_quickly')
+        .trigger(this, trendTokens);
+    }
+
     await this.homey.flow.getDeviceTriggerCard('glucose_updated').trigger(this, {
       glucose_mgdl: reading.valueMgDl,
       glucose_mmol: reading.valueMmol,
@@ -151,7 +172,7 @@ module.exports = class LibreViewDevice extends Homey.Device {
     });
 
     this.homey.app.debug(
-      `Updated glucose value: ${reading.valueMgDl} mg/dL (${reading.valueMmol} mmol/L)`
+      `Updated glucose value: ${reading.valueMgDl} mg/dL (${reading.valueMmol} mmol/L)`,
     );
   }
 
@@ -172,10 +193,85 @@ module.exports = class LibreViewDevice extends Homey.Device {
       }
     }
 
-    const result = [...merged.values()].sort((a, b) =>
-      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    const result = [...merged.values()].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
     await this.setStoreValue('glucoseHistory24h', result);
+  }
+
+  getEffectiveTargetRange(reading = null) {
+    const stored = this.getStoreValue('targetRange');
+    const accountLow = Number(reading?.targetLowMgDl ?? stored?.accountLowMgDl);
+    const accountHigh = Number(reading?.targetHighMgDl ?? stored?.accountHighMgDl);
+    const customLow = Number(this.getSetting('target_low_mgdl'));
+    const customHigh = Number(this.getSetting('target_high_mgdl'));
+    const useCustom = this.getSetting('target_range_source') === 'custom'
+      && Number.isFinite(customLow) && Number.isFinite(customHigh)
+      && customLow < customHigh;
+    let lowMgDl = Number.isFinite(accountLow) ? accountLow : 70;
+    let highMgDl = Number.isFinite(accountHigh) ? accountHigh : 180;
+
+    if (useCustom) {
+      lowMgDl = customLow;
+      highMgDl = customHigh;
+    }
+
+    return {
+      lowMgDl,
+      highMgDl,
+      lowMmol: Math.round((lowMgDl / 18.0182) * 10) / 10,
+      highMmol: Math.round((highMgDl / 18.0182) * 10) / 10,
+      source: useCustom ? 'custom' : 'account',
+      accountLowMgDl: Number.isFinite(accountLow) ? accountLow : 70,
+      accountHighMgDl: Number.isFinite(accountHigh) ? accountHigh : 180,
+    };
+  }
+
+  calculateTimeInRange(points, targetRange) {
+    const durations = {
+      low: 0, inRange: 0, high: 0, gap: 0,
+    };
+    const maxIntervalMs = 15 * 60 * 1000;
+    const addDuration = (point, duration) => {
+      const value = Number(point?.valueMgDl);
+      if (!Number.isFinite(value) || duration <= 0) return;
+      if (duration > maxIntervalMs) {
+        durations.gap += duration;
+      } else if (value < targetRange.lowMgDl) {
+        durations.low += duration;
+      } else if (value > targetRange.highMgDl) {
+        durations.high += duration;
+      } else {
+        durations.inRange += duration;
+      }
+    };
+
+    for (let index = 0; index < points.length - 1; index += 1) {
+      const point = points[index];
+      const start = new Date(point.timestamp).getTime();
+      const end = new Date(points[index + 1].timestamp).getTime();
+      if (Number.isFinite(start) && Number.isFinite(end)) {
+        addDuration(point, end - start);
+      }
+    }
+
+    const lastPoint = points.at(-1);
+    const lastTimestamp = new Date(lastPoint?.timestamp).getTime();
+    if (Number.isFinite(lastTimestamp)) {
+      addDuration(lastPoint, Date.now() - lastTimestamp);
+    }
+
+    const covered = durations.low + durations.inRange + durations.high;
+    const percentage = (value) => {
+      return covered ? Math.round((value / covered) * 100) : null;
+    };
+
+    return {
+      lowPercent: percentage(durations.low),
+      inRangePercent: percentage(durations.inRange),
+      highPercent: percentage(durations.high),
+      coveredMinutes: Math.round(covered / 60000),
+      gapMinutes: Math.round(durations.gap / 60000),
+    };
   }
 
   getDashboardData() {
@@ -184,25 +280,28 @@ module.exports = class LibreViewDevice extends Homey.Device {
       : [];
     const cutoff = Date.now() - 24 * 60 * 60 * 1000;
     const points = history
-      .filter(item => {
+      .filter((item) => {
         const timestamp = new Date(item.timestamp).getTime();
         return Number.isFinite(timestamp) && timestamp >= cutoff;
       })
-      .map(item => ({
+      .map((item) => ({
         timestamp: item.timestamp,
         valueMgDl: item.valueMgDl,
         valueMmol: item.valueMmol,
         trend: item.trend,
         trendArrow: item.trendArrow,
       }));
-    const valuesMgDl = points.map(item => item.valueMgDl).filter(Number.isFinite);
-    const valuesMmol = points.map(item => item.valueMmol).filter(Number.isFinite);
+    const valuesMgDl = points.map((item) => item.valueMgDl).filter(Number.isFinite);
+    const valuesMmol = points.map((item) => item.valueMmol).filter(Number.isFinite);
     const lastReading = this.getStoreValue('lastReading') ?? points.at(-1) ?? null;
+    const targetRange = this.getEffectiveTargetRange();
 
     return {
       deviceName: this.getName(),
       current: lastReading,
       history: points,
+      targetRange,
+      timeInRange: this.calculateTimeInRange(points, targetRange),
       stats: {
         minMgDl: valuesMgDl.length ? Math.min(...valuesMgDl) : null,
         maxMgDl: valuesMgDl.length ? Math.max(...valuesMgDl) : null,
@@ -212,8 +311,8 @@ module.exports = class LibreViewDevice extends Homey.Device {
         minMmol: valuesMmol.length ? Math.min(...valuesMmol) : null,
         maxMmol: valuesMmol.length ? Math.max(...valuesMmol) : null,
         avgMmol: valuesMmol.length
-          ? Math.round((valuesMmol.reduce((sum, value) => sum + value, 0) /
-            valuesMmol.length) * 10) / 10
+          ? Math.round((valuesMmol.reduce((sum, value) => sum + value, 0)
+            / valuesMmol.length) * 10) / 10
           : null,
       },
       status: {
@@ -224,9 +323,14 @@ module.exports = class LibreViewDevice extends Homey.Device {
   }
 
   async onSettings({ newSettings, changedKeys }) {
+    if (newSettings.target_range_source === 'custom'
+      && Number(newSettings.target_low_mgdl) >= Number(newSettings.target_high_mgdl)) {
+      throw new Error('The lower target limit must be below the upper target limit');
+    }
+
     if (changedKeys.includes('glucose_unit')) {
       this.homey.app.debug(
-        `Glucose display unit changed to: ${newSettings.glucose_unit}`
+        `Glucose display unit changed to: ${newSettings.glucose_unit}`,
       );
     }
 

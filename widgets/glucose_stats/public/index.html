@@ -106,7 +106,7 @@
 
 <body>
   <div id="content" class="empty">
-    Lade Werte…
+    ...
   </div>
 
   <script type="text/javascript">
@@ -119,6 +119,7 @@
         rising_quickly: '↑',
         unknown: '–',
       };
+      const translate = (key, fallback) => Homey.__(`widgets.${key}`) || fallback;
 
       function getUnitSettings() {
         const settings = Homey.getSettings();
@@ -152,12 +153,15 @@
           ? 'error'
           : ageMinutes > 15 ? 'stale' : '';
         const freshnessText = connectionError
-          ? 'Verbindungsfehler'
-          : ageMinutes === null ? '' : `vor ${ageMinutes} min`;
+          ? translate('connection_error', 'Connection error')
+          : ageMinutes === null
+            ? ''
+            : translate('minutes_ago', '__minutes__ min ago')
+              .replace('__minutes__', ageMinutes);
 
         if (!current) {
           content.className = 'empty';
-          content.textContent = 'Noch keine Glukosewerte vorhanden.';
+          content.textContent = translate('no_data', 'No glucose values available yet.');
           return;
         }
 
@@ -184,24 +188,28 @@
 
           <div class="stats-group">
             <div class="stat">
-              <div class="label">Min</div>
+              <div class="label">${translate('min', 'Min')}</div>
               <div class="stat-value">
                 ${formatValue(stats[`min${unitSettings.statSuffix}`], unitSettings.decimals)}
               </div>
             </div>
 
             <div class="stat">
-              <div class="label">Ø</div>
+              <div class="label">${translate('average', 'Avg')}</div>
               <div class="stat-value">
                 ${formatValue(stats[`avg${unitSettings.statSuffix}`], unitSettings.decimals)}
               </div>
             </div>
 
             <div class="stat">
-              <div class="label">Max</div>
+              <div class="label">${translate('max', 'Max')}</div>
               <div class="stat-value">
                 ${formatValue(stats[`max${unitSettings.statSuffix}`], unitSettings.decimals)}
               </div>
+            </div>
+            <div class="stat">
+              <div class="label">${translate('time_in_range', 'In range')}</div>
+              <div class="stat-value">${Number.isFinite(data.timeInRange?.inRangePercent) ? `${data.timeInRange.inRangePercent}%` : '–'}</div>
             </div>
           </div>
         `;
@@ -225,12 +233,14 @@
         } catch (err) {
           const content = document.getElementById('content');
           content.className = 'empty';
-          content.textContent = err.message || String(err);
+          content.textContent = translate('connection_error', 'Connection error');
         }
       }
 
       Homey.ready();
 
+      document.getElementById('content').textContent =
+        translate('loading', 'Loading glucose values...');
       refresh();
 
       Homey.on('settings', () => {

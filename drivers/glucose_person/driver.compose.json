@@ -75,15 +75,62 @@
       ]
     },
     {
-        "id": "sensor_lifetime_days",
-        "type": "number",
-        "label": {
-            "en": "Sensor lifetime in days",
-            "de": "Sensorlaufzeit in Tagen"
+      "id": "target_range_source",
+      "type": "dropdown",
+      "label": {
+        "en": "Target range",
+        "de": "Zielbereich"
+      },
+      "value": "account",
+      "values": [
+        {
+          "id": "account",
+          "label": {
+            "en": "Use LibreView target range",
+            "de": "LibreView-Zielbereich verwenden"
+          }
         },
-        "value": 15,
-        "min": 1,
-        "max": 30
+        {
+          "id": "custom",
+          "label": {
+            "en": "Use custom target range",
+            "de": "Eigenen Zielbereich verwenden"
+          }
+        }
+      ]
+    },
+    {
+      "id": "target_low_mgdl",
+      "type": "number",
+      "label": {
+        "en": "Custom low limit (mg/dL)",
+        "de": "Eigene Untergrenze (mg/dL)"
+      },
+      "value": 70,
+      "min": 40,
+      "max": 499
+    },
+    {
+      "id": "target_high_mgdl",
+      "type": "number",
+      "label": {
+        "en": "Custom high limit (mg/dL)",
+        "de": "Eigene Obergrenze (mg/dL)"
+      },
+      "value": 180,
+      "min": 41,
+      "max": 500
+    },
+    {
+      "id": "sensor_lifetime_days",
+      "type": "number",
+      "label": {
+        "en": "Sensor lifetime in days",
+        "de": "Sensorlaufzeit in Tagen"
+      },
+      "value": 15,
+      "min": 1,
+      "max": 30
     }
   ],
   "pair": [

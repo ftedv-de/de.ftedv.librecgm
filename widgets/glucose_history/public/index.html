@@ -125,7 +125,7 @@
 
 <body>
   <div id="content" class="empty">
-    Lade Werte…
+    ...
   </div>
 
   <script type="text/javascript">
@@ -138,6 +138,7 @@
         rising_quickly: '↑',
         unknown: '–',
       };
+      const translate = (key, fallback) => Homey.__(`widgets.${key}`) || fallback;
 
       function getUnitSettings() {
         const settings = Homey.getSettings();
@@ -189,6 +190,35 @@
         };
       }
 
+      function calculateTimeInRange(points, targetRange) {
+        const durations = { low: 0, inRange: 0, high: 0 };
+        let covered = 0;
+        const addDuration = (point, duration) => {
+          const value = Number(point?.valueMgDl);
+          if (!Number.isFinite(value) || duration <= 0 || duration > 15 * 60000) return;
+          covered += duration;
+          if (value < targetRange.lowMgDl) durations.low += duration;
+          else if (value > targetRange.highMgDl) durations.high += duration;
+          else durations.inRange += duration;
+        };
+
+        for (let index = 0; index < points.length - 1; index += 1) {
+          const start = new Date(points[index].timestamp).getTime();
+          const end = new Date(points[index + 1].timestamp).getTime();
+          if (Number.isFinite(start) && Number.isFinite(end)) {
+            addDuration(points[index], end - start);
+          }
+        }
+
+        const lastPoint = points.at(-1);
+        const lastTimestamp = new Date(lastPoint?.timestamp).getTime();
+        if (Number.isFinite(lastTimestamp)) {
+          addDuration(lastPoint, Date.now() - lastTimestamp);
+        }
+
+        return covered ? Math.round((durations.inRange / covered) * 100) : null;
+      }
+
       function smoothChartPoints(points, windowMs) {
         const halfWindowMs = windowMs / 2;
 
@@ -213,7 +243,7 @@
         });
       }
 
-      function drawChart(canvas, points, unitSettings) {
+      function drawChart(canvas, points, unitSettings, targetRange) {
         const ctx = canvas.getContext('2d');
 
         const width = canvas.clientWidth;
@@ -269,8 +299,16 @@
         const chartHeight =
           height - paddingTop - paddingBottom;
 
-        const values =
-          visiblePoints.map(point => point.chartValue);
+        const targetLow = unitSettings.unit === 'mmol'
+          ? targetRange.lowMmol
+          : targetRange.lowMgDl;
+        const targetHigh = unitSettings.unit === 'mmol'
+          ? targetRange.highMmol
+          : targetRange.highMgDl;
+        const values = visiblePoints.map(point => point.chartValue);
+
+        if (Number.isFinite(targetLow)) values.push(targetLow);
+        if (Number.isFinite(targetHigh)) values.push(targetHigh);
 
         const min =
           Math.min(...values);
@@ -280,6 +318,13 @@
 
         const range =
           Math.max(0.1, max - min);
+
+        if (Number.isFinite(targetLow) && Number.isFinite(targetHigh)) {
+          const top = paddingTop + chartHeight - ((targetHigh - min) / range) * chartHeight;
+          const bottom = paddingTop + chartHeight - ((targetLow - min) / range) * chartHeight;
+          ctx.fillStyle = 'rgba(76, 175, 80, 0.12)';
+          ctx.fillRect(paddingLeft, top, chartWidth, bottom - top);
+        }
 
         ctx.strokeStyle =
           'rgba(128,128,128,0.3)';
@@ -374,6 +419,7 @@
           ctx.beginPath();
 
           let started = false;
+          let previousTime = null;
 
           pointsToDraw.forEach(point => {
             if (point.time < start || point.time > now) {
@@ -390,12 +436,14 @@
             const p =
               pointToCanvas(point, value);
 
-            if (!started) {
+            if (!started || (previousTime !== null && point.time - previousTime > 15 * 60000)) {
               ctx.moveTo(p.x, p.y);
               started = true;
             } else {
               ctx.lineTo(p.x, p.y);
             }
+
+            previousTime = point.time;
           });
 
           ctx.strokeStyle = strokeStyle;
@@ -424,6 +472,21 @@
             2
           );
         }
+
+        visiblePoints.forEach(point => {
+          const quickTrend = point.trend === 'rising_quickly' ||
+            point.trend === 'falling_quickly';
+          const outsideRange = point.chartValue < targetLow || point.chartValue > targetHigh;
+          if (!quickTrend && !outsideRange) return;
+
+          const position = pointToCanvas(point, point.chartValue);
+          ctx.beginPath();
+          ctx.arc(position.x, position.y, quickTrend ? 3 : 2.5, 0, Math.PI * 2);
+          ctx.fillStyle = point.chartValue < targetLow
+            ? '#e53935'
+            : point.chartValue > targetHigh ? '#fb8c00' : '#7e57c2';
+          ctx.fill();
+        });
       }
 
       function render(data) {
@@ -461,12 +524,22 @@
           ? 'error'
           : ageMinutes > 15 ? 'stale' : '';
         const freshnessText = connectionError
-          ? 'Verbindungsfehler'
-          : ageMinutes === null ? '' : `vor ${ageMinutes} min`;
+          ? translate('connection_error', 'Connection error')
+          : ageMinutes === null
+            ? ''
+            : translate('minutes_ago', '__minutes__ min ago')
+              .replace('__minutes__', ageMinutes);
+        const targetRange = data.targetRange || {
+          lowMgDl: 70,
+          highMgDl: 180,
+          lowMmol: 3.9,
+          highMmol: 10,
+        };
+        const timeInRange = calculateTimeInRange(visibleHistory, targetRange);
 
         if (!current) {
           content.className = 'empty';
-          content.textContent = 'Noch keine Glukosewerte vorhanden.';
+          content.textContent = translate('no_data', 'No glucose values available yet.');
           return;
         }
 
@@ -494,24 +567,28 @@
 
             <div class="stats-group">
               <div class="stat">
-                <div class="label">Min</div>
+                <div class="label">${translate('min', 'Min')}</div>
                 <div class="stat-value">
                   ${formatValue(visibleStats.min, unitSettings.decimals)}
                 </div>
               </div>
 
               <div class="stat">
-                <div class="label">Ø</div>
+                <div class="label">${translate('average', 'Avg')}</div>
                 <div class="stat-value">
                   ${formatValue(visibleStats.avg, unitSettings.decimals)}
                 </div>
               </div>
 
               <div class="stat">
-                <div class="label">Max</div>
+                <div class="label">${translate('max', 'Max')}</div>
                 <div class="stat-value">
                   ${formatValue(visibleStats.max, unitSettings.decimals)}
                 </div>
+              </div>
+              <div class="stat">
+                <div class="label">${translate('time_in_range', 'In range')}</div>
+                <div class="stat-value">${timeInRange === null ? '–' : `${timeInRange}%`}</div>
               </div>
             </div>
           </div>
@@ -524,7 +601,8 @@
         drawChart(
           document.getElementById('chart'),
           history,
-          unitSettings
+          unitSettings,
+          targetRange
         );
       }
 
@@ -554,12 +632,14 @@
             'empty';
 
           content.textContent =
-            err.message || String(err);
+            translate('connection_error', 'Connection error');
         }
       }
 
       Homey.ready();
 
+      document.getElementById('content').textContent =
+        translate('loading', 'Loading glucose values...');
       refresh();
 
       Homey.on('settings', () => {
