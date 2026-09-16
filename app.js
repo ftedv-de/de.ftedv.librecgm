@@ -1,11 +1,21 @@
 'use strict';
 
 const Homey = require('homey');
+const AccountManager = require('./lib/AccountManager');
 
 module.exports = class LibreCGM extends Homey.App {
 
   async onInit() {
+    this.accountManager = new AccountManager({
+      homey: this.homey,
+      debug: (...args) => this.debug(...args),
+    });
+    await this.accountManager.init();
     this.log('LibreCGM has been initialized');
+  }
+
+  async onUninit() {
+    this.accountManager?.destroy();
   }
 
   isDebugEnabled() {

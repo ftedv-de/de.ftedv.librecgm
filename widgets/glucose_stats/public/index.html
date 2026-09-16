@@ -54,6 +54,18 @@
       line-height: 1;
     }
 
+    .freshness {
+      font-size: 10px;
+      opacity: .65;
+      white-space: nowrap;
+    }
+
+    .freshness.stale,
+    .freshness.error {
+      color: #f57c00;
+      opacity: 1;
+    }
+
     .stats-group {
       flex: 1;
       display: flex;
@@ -131,6 +143,17 @@
         const current = data.current;
         const stats = data.stats || {};
         const unitSettings = getUnitSettings();
+        const readingTime = new Date(current?.timestamp).getTime();
+        const ageMinutes = Number.isFinite(readingTime)
+          ? Math.max(0, Math.floor((Date.now() - readingTime) / 60000))
+          : null;
+        const connectionError = data.status?.connectionError;
+        const freshnessClass = connectionError
+          ? 'error'
+          : ageMinutes > 15 ? 'stale' : '';
+        const freshnessText = connectionError
+          ? 'Verbindungsfehler'
+          : ageMinutes === null ? '' : `vor ${ageMinutes} min`;
 
         if (!current) {
           content.className = 'empty';
@@ -152,6 +175,10 @@
 
             <span class="trend">
               ${trendMap[current.trend] || '–'}
+            </span>
+
+            <span class="freshness ${freshnessClass}">
+              ${freshnessText}
             </span>
           </div>
 

@@ -16,10 +16,14 @@ module.exports = class LibreViewDriver extends Homey.Driver {
 
       await client.login();
       const connections = await client.getConnections();
-
-      this.pairSession = {
+      const registration = await this.homey.app.accountManager.registerAccount({
         credentials,
         auth: client.exportAuth(),
+        connections,
+      });
+
+      this.pairSession = {
+        accountId: registration.accountId,
         connections
       };
 
@@ -38,8 +42,7 @@ module.exports = class LibreViewDriver extends Homey.Driver {
           patientId: connection.patientId || connection.id
         },
         store: {
-          credentials: this.pairSession.credentials,
-          auth: this.pairSession.auth,
+          accountId: this.pairSession.accountId,
           patientName: connection.name
         },
         settings: {

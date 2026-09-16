@@ -14,7 +14,8 @@
     "sensor_expiry_hours",
     "alarm_glucose_high",
     "alarm_glucose_low",
-    "alarm_sensor_expiry"
+    "alarm_sensor_expiry",
+    "sensor_serial_number"
   ],
   "capabilitiesOptions": {
     "measure_glucose_mgdl": {
@@ -30,6 +31,9 @@
       "preventInsights": true
     },
     "sensor_expiry_hours": {
+      "preventInsights": true
+    },
+    "sensor_serial_number": {
       "preventInsights": true
     }
   },
