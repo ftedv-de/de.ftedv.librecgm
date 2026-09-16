@@ -46,5 +46,8 @@
   },
   "1.3.1": {
     "en": "Fixed stats display in history widget to show correct stats for selected time span"
+  },
+  "2.0.0": {
+    "en": "Added centralized LibreLinkUp account management with automatic migration, improved polling reliability, configurable glucose target ranges, Time in Range statistics, rapid rise/fall Flow triggers, enhanced history charts, stale-data indicators, and a new multi-person overview widget."
   }
 }
